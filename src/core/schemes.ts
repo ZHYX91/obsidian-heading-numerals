@@ -21,6 +21,7 @@ export const BUILT_IN_SCHEMES: Readonly<Record<BuiltInSchemeId, NumberingScheme>
     id: "hierarchical",
     baseLevel: 1,
     templates: HIERARCHICAL_TEMPLATES,
+    exclusions: [],
   },
   "hierarchical-h2": {
     id: "hierarchical-h2",
@@ -33,6 +34,7 @@ export const BUILT_IN_SCHEMES: Readonly<Record<BuiltInSchemeId, NumberingScheme>
       "{2.arabic}.{3.arabic}.{4.arabic}.{5.arabic}",
       "{2.arabic}.{3.arabic}.{4.arabic}.{5.arabic}.{6.arabic}",
     ],
+    exclusions: [],
   },
   "chinese-official": {
     id: "chinese-official",
@@ -45,6 +47,7 @@ export const BUILT_IN_SCHEMES: Readonly<Record<BuiltInSchemeId, NumberingScheme>
       "{5.circled}",
       "{6.letter_lower}.",
     ],
+    exclusions: [],
   },
   legal: {
     id: "legal",
@@ -57,6 +60,7 @@ export const BUILT_IN_SCHEMES: Readonly<Record<BuiltInSchemeId, NumberingScheme>
       "（{5.chinese_lower}）",
       "{6.arabic}.",
     ],
+    exclusions: [],
   },
 };
 
@@ -67,8 +71,9 @@ export function isBuiltInSchemeId(value: string): value is BuiltInSchemeId {
 }
 
 export function findMatchingBuiltInSchemeId(
-  scheme: Pick<NumberingScheme, "baseLevel" | "templates">,
+  scheme: Pick<NumberingScheme, "baseLevel" | "templates"> & Pick<Partial<NumberingScheme>, "exclusions">,
 ): BuiltInSchemeId | null {
+  if ((scheme.exclusions?.length ?? 0) > 0) return null;
   for (const id of BUILT_IN_SCHEME_IDS) {
     const builtIn = BUILT_IN_SCHEMES[id];
     if (scheme.baseLevel !== builtIn.baseLevel) continue;

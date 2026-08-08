@@ -54,7 +54,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       await this.recoveryStore.save(data.lastBatch);
     }
     this.settingsCoordinator = new SettingsSaveCoordinator(async (snapshot) => {
-      await this.saveData({ schemaVersion: 3, settings: snapshot });
+      await this.saveData({ schemaVersion: 4, settings: snapshot });
     });
     await this.settingsCoordinator.save(cloneSettings(this.settings)).catch((error: unknown) => {
       console.error("Heading Numerals: initial settings migration remains pending", error);

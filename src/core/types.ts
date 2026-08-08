@@ -57,6 +57,13 @@ export type NumberFormat =
 
 export type Counters = [number, number, number, number, number, number];
 
+export type HeadingExclusionScope = "heading" | "subtree";
+
+export interface HeadingExclusionRule {
+  title: string;
+  scope: HeadingExclusionScope;
+}
+
 export interface ParsedHeading {
   line: number;
   level: number;
@@ -86,6 +93,7 @@ export interface NumberingScheme {
   id: string;
   baseLevel: number;
   templates: readonly string[];
+  exclusions: readonly HeadingExclusionRule[];
 }
 
 export interface CustomNumberingScheme extends NumberingScheme {
@@ -120,6 +128,7 @@ export interface NumberedHeading {
   label: string | null;
   counters: Counters;
   warning: string | null;
+  exclusion: HeadingExclusionScope | null;
 }
 
 export type TransformOperation = "write" | "remove" | "renumber" | "strip-markers";

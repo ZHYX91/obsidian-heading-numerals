@@ -138,6 +138,7 @@ describe("current note overrides", () => {
         revision: 1,
         baseLevel: 1,
         templates: ["{1.arabic}", "", "", "", "", ""],
+        exclusions: [],
       }],
     };
     const snapshot = readNoteControlSnapshot(

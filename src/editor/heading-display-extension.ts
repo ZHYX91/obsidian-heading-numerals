@@ -24,6 +24,7 @@ import {
 import { parseAtxHeadings } from "../core/heading-parser";
 import type { ParsedHeading } from "../core/types";
 import { createDisplayPlan } from "../application/display-plan";
+import { createVirtualNumeralElement } from "../ui/virtual-numeral";
 
 export const refreshHeadingDisplay = StateEffect.define<void>();
 
@@ -37,12 +38,7 @@ class NumeralWidget extends WidgetType {
   }
 
   override toDOM(view: EditorView): HTMLElement {
-    const element = view.dom.ownerDocument.createElement("span");
-    element.className = "heading-numerals-virtual";
-    element.textContent = `${this.label} `;
-    element.setAttribute("aria-hidden", "true");
-    element.setAttribute("contenteditable", "false");
-    return element;
+    return createVirtualNumeralElement(view.dom.ownerDocument, this.label);
   }
 
   override ignoreEvent(): boolean {

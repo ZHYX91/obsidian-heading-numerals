@@ -13,6 +13,7 @@ describe("current note scheme options", () => {
       revision: 1,
       baseLevel: 1,
       templates: ["{1.arabic}", "", "", "", "", ""],
+      exclusions: [],
     }];
 
     expect(noteSchemeOptions(settings, null, (key) => key)).toEqual(expect.arrayContaining([

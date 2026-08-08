@@ -51,6 +51,15 @@ Source markers are disabled by default. Before enabling them for a release claim
 - [ ] Test malformed and one-sided markers; they must fail closed.
 - [ ] Run the strip-marker command and verify visible numbers remain.
 
+## Exact-title exclusions
+
+- [ ] Add an exact exclusion to a copied custom scheme and verify the current-note match preview.
+- [ ] Verify a heading-only exclusion does not consume a number and routes descendants through each skipped-level strategy.
+- [ ] Verify a whole-section exclusion skips its descendants and numbering resumes at the surrounding level.
+- [ ] Verify Live Preview, Reading View, write, renumber, current-note commands, and batch preview share the same exclusions.
+- [ ] Verify a confirmed old prefix is removed from an excluded title while an ambiguous manual prefix is preserved with a warning.
+- [ ] Verify inline formatting, similar-but-not-exact titles, code fences, YAML, comments, and duplicate rules fail safely.
+
 ## Batch recovery
 
 - [ ] Use a temporary folder with at least ten notes and preview write, remove, and renumber.

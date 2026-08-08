@@ -8,10 +8,21 @@ import {
   isBuiltInSchemeId,
 } from "../core/schemes";
 import { compileTemplate, NUMBER_FORMATS, renderTemplate } from "../core/template-compiler";
-import { BUILT_IN_SCHEME_IDS, type CustomNumberingScheme } from "../core/types";
+import { matchHeadingExclusion, normalizeExclusionTitle } from "../core/heading-exclusions";
+import {
+  BUILT_IN_SCHEME_IDS,
+  type CustomNumberingScheme,
+  type HeadingExclusionRule,
+  type ParsedHeading,
+} from "../core/types";
 import type { SettingsImpact } from "./settings-impact";
 
 const PREVIEW_COUNTERS = [2, 3, 4, 5, 6, 7] as [number, number, number, number, number, number];
+
+type EditableScheme = Omit<CustomNumberingScheme, "templates" | "exclusions"> & {
+  templates: string[];
+  exclusions: HeadingExclusionRule[];
+};
 
 type SchemeCommit = (
   update: (settings: HeadingNumeralsSettings) => void,
@@ -78,6 +89,7 @@ export class SchemeSettingsRenderer {
     private readonly getSettings: () => HeadingNumeralsSettings,
     private readonly commit: SchemeCommit,
     private readonly t: Translate,
+    private readonly getActiveHeadings: () => readonly ParsedHeading[] = () => [],
   ) {}
 
   renderSchemes(container: HTMLElement): void {
@@ -103,6 +115,7 @@ export class SchemeSettingsRenderer {
             revision: 1,
             baseLevel: 1,
             templates: ["{1.arabic}", "{1.arabic}.{2.arabic}", "", "", "", ""],
+            exclusions: [],
           };
           next.customSchemes.push(scheme);
           next.selectedSchemeId = scheme.id;
@@ -184,6 +197,7 @@ export class SchemeSettingsRenderer {
             revision: 1,
             baseLevel: scheme.baseLevel,
             templates: [...scheme.templates],
+            exclusions: [],
           };
           settings.customSchemes.push(copy);
           settings.selectedSchemeId = copy.id;
@@ -239,7 +253,12 @@ export class SchemeSettingsRenderer {
         });
       }
     }
-    const draft = { ...scheme, name: displayName, templates: [...scheme.templates] };
+    const draft: EditableScheme = {
+      ...scheme,
+      name: displayName,
+      templates: [...scheme.templates],
+      exclusions: scheme.exclusions.map((rule) => ({ ...rule })),
+    };
     new Setting(details).setName(t("settings.scheme.name")).addText((text) => text
       .setValue(draft.name)
       .onChange((value) => { draft.name = value.slice(0, 80); }));
@@ -253,16 +272,21 @@ export class SchemeSettingsRenderer {
     validation.setAttribute("role", "alert");
     const previewElements: HTMLElement[] = [];
     const updateValidation = (): boolean => {
-      const invalid = draft.templates.some((template) => compileTemplate(template).diagnostics.length > 0);
-      validation.hidden = !invalid;
-      validation.textContent = invalid ? t("settings.scheme.invalid") : "";
+      const invalidTemplate = draft.templates.some((template) => compileTemplate(template).diagnostics.length > 0);
+      const normalizedTitles = draft.exclusions.map((rule) => normalizeExclusionTitle(rule.title));
+      const invalidExclusions = normalizedTitles.some((title) => title.length === 0)
+        || new Set(normalizedTitles).size !== normalizedTitles.length;
+      validation.hidden = !invalidTemplate && !invalidExclusions;
+      validation.textContent = invalidTemplate
+        ? t("settings.scheme.invalid")
+        : invalidExclusions ? t("settings.scheme.exclusions.invalid") : "";
       draft.templates.forEach((template, index) => {
         const preview = previewElements[index];
         if (preview != null) preview.textContent = template.length === 0
           ? t("settings.scheme.disabled")
           : t("settings.scheme.preview", { value: renderTemplate(template, PREVIEW_COUNTERS) });
       });
-      return !invalid && draft.name.trim().length > 0;
+      return !invalidTemplate && !invalidExclusions && draft.name.trim().length > 0;
     };
     for (let index = 0; index < 6; index += 1) {
       const preview = details.createDiv({ cls: "heading-numerals-template-preview" });
@@ -274,6 +298,70 @@ export class SchemeSettingsRenderer {
           updateValidation();
         }));
     }
+    new Setting(details)
+      .setName(t("settings.scheme.exclusions"))
+      .setDesc(t("settings.scheme.exclusions.desc"))
+      .setHeading();
+    const exclusionList = details.createDiv({ cls: "heading-numerals-exclusion-list" });
+    const exclusionPreview = details.createEl("p", {
+      cls: "setting-item-description heading-numerals-exclusion-preview",
+    });
+    const updateExclusionPreview = (): void => {
+      const matches = this.getActiveHeadings().filter((heading) => matchHeadingExclusion(heading, draft) != null);
+      exclusionPreview.textContent = matches.length === 0
+        ? t("settings.scheme.exclusions.noMatches")
+        : t("settings.scheme.exclusions.matches", {
+          count: String(matches.length),
+          titles: matches.slice(0, 5).map((heading) => heading.content).join(" · "),
+        });
+    };
+    const renderExclusions = (): void => {
+      exclusionList.empty();
+      draft.exclusions.forEach((rule, index) => {
+        new Setting(exclusionList)
+          .addText((text) => text
+            .setPlaceholder(t("settings.scheme.exclusions.placeholder"))
+            .setValue(rule.title)
+            .onChange((value) => {
+              const currentRule = draft.exclusions[index] ?? rule;
+              draft.exclusions[index] = { ...currentRule, title: value.slice(0, 200) };
+              updateValidation();
+              updateExclusionPreview();
+            }))
+          .addDropdown((dropdown) => dropdown
+            .addOption("subtree", t("settings.scheme.exclusions.subtree"))
+            .addOption("heading", t("settings.scheme.exclusions.heading"))
+            .setValue(rule.scope)
+            .onChange((value) => {
+              const currentRule = draft.exclusions[index] ?? rule;
+              draft.exclusions[index] = {
+                ...currentRule,
+                scope: value === "heading" ? "heading" : "subtree",
+              };
+              updateValidation();
+              updateExclusionPreview();
+            }))
+          .addButton((button) => button
+            .setIcon("trash-2")
+            .setTooltip(t("settings.scheme.exclusions.remove"))
+            .onClick(() => {
+              draft.exclusions.splice(index, 1);
+              renderExclusions();
+              updateValidation();
+              updateExclusionPreview();
+            }));
+      });
+    };
+    new Setting(details).addButton((button) => button
+      .setButtonText(t("settings.scheme.exclusions.add"))
+      .onClick(() => {
+        draft.exclusions.push({ title: "", scope: "subtree" });
+        renderExclusions();
+        updateValidation();
+        updateExclusionPreview();
+      }));
+    renderExclusions();
+    updateExclusionPreview();
     updateValidation();
     new Setting(details)
       .addButton((button) => button.setButtonText(t("settings.scheme.save")).setCta().onClick(() => {
@@ -283,13 +371,18 @@ export class SchemeSettingsRenderer {
           if (current == null) return;
           const changed = current.name !== draft.name.trim()
             || current.baseLevel !== draft.baseLevel
-            || current.templates.some((template, index) => template !== draft.templates[index]);
+            || current.templates.some((template, index) => template !== draft.templates[index])
+            || JSON.stringify(current.exclusions) !== JSON.stringify(draft.exclusions);
           if (!changed) return;
           archiveScheme(settings, current);
           Object.assign(current, {
             name: draft.name.trim(),
             baseLevel: draft.baseLevel,
             templates: [...draft.templates],
+            exclusions: draft.exclusions.map((rule) => ({
+              title: normalizeExclusionTitle(rule.title),
+              scope: rule.scope,
+            })),
             revision: current.revision + 1,
           });
         }, "display", true, true);

@@ -117,6 +117,22 @@ describe("heading transforms", () => {
     expect(planHeadingTransform("# 1.1 Manual", "remove", configured).result).toBe("# 1.1 Manual");
   });
 
+  it("removes confirmed old numbers from excluded titles while preserving manual ambiguity", () => {
+    const configured = options();
+    configured.numbering = {
+      ...configured.numbering,
+      scheme: {
+        ...configured.numbering.scheme,
+        exclusions: [{ title: "References", scope: "heading" }],
+      },
+    };
+    const source = "# 1 First\n# 2 References\n# 3 Next\n# 2026. References";
+    const plan = planHeadingTransform(source, "renumber", configured);
+    expect(plan.result).toBe("# 1 First\n# References\n# 2 Next\n# 2026. References");
+    expect(plan.changes.some((change) => change.ruleId === "remove-excluded-number")).toBe(true);
+    expect(plan.warnings.some((warning) => warning.heading === "2026. References")).toBe(true);
+  });
+
   it("never throws for deterministic arbitrary text", () => {
     let state = 0x5EED1234;
     const alphabet = "#`~<>!-_ .\n\r0123456789一二三ABC()（）①\u2060";

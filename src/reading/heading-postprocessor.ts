@@ -11,6 +11,10 @@ import { WORD_JOINER } from "../core/markers";
 import { createDisplayPlan } from "../application/display-plan";
 import type { DisplayDecorationPlan } from "../application/display-plan";
 import type { ParsedHeading } from "../core/types";
+import {
+  createVirtualNumeralElement,
+  VIRTUAL_NUMERAL_SELECTOR,
+} from "../ui/virtual-numeral";
 
 interface CachedReadingPlan {
   readonly headings: readonly ParsedHeading[];
@@ -32,7 +36,7 @@ function headingElements(container: HTMLElement): HTMLHeadingElement[] {
 }
 
 function cleanupHeading(element: HTMLHeadingElement): void {
-  for (const virtual of element.querySelectorAll<HTMLElement>(".heading-numerals-virtual")) {
+  for (const virtual of element.querySelectorAll<HTMLElement>(VIRTUAL_NUMERAL_SELECTOR)) {
     virtual.remove();
   }
   for (const concealed of element.querySelectorAll<HTMLElement>(".heading-numerals-concealed")) {
@@ -43,12 +47,7 @@ function cleanupHeading(element: HTMLHeadingElement): void {
 }
 
 function prependVirtualNumber(element: HTMLHeadingElement, label: string): void {
-  const span = element.ownerDocument.createElement("span");
-  span.className = "heading-numerals-virtual";
-  span.textContent = `${label} `;
-  span.setAttribute("aria-hidden", "true");
-  span.setAttribute("contenteditable", "false");
-  element.prepend(span);
+  element.prepend(createVirtualNumeralElement(element.ownerDocument, label));
 }
 
 function leadingTextNodes(element: HTMLHeadingElement): Text[] {

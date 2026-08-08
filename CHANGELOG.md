@@ -2,6 +2,25 @@
 
 All notable changes will be documented in this file.
 
+## 0.6.0 - 2026-08-09
+
+### Added
+
+- Added exact-title exclusions to custom schemes, with separate heading-only and whole-section behavior.
+- Added live current-note match feedback while editing exclusion rules.
+
+### Changed
+
+- Excluded headings do not consume counters; whole-section exclusions also skip every descendant until the section ends.
+- Heading-only descendants use the existing skipped-level strategy instead of inheriting the previous numbered section.
+- Virtual numbers now use a clearer default opacity and one CSS-controlled visual gap in both Live Preview and Reading View.
+- Live Preview and Reading View share one virtual-number DOM factory and accessibility contract.
+- Persisted settings migrate to schema 4; the old default virtual appearance migrates to the new defaults while custom values are preserved.
+
+### Safety
+
+- Renumbering removes an old prefix from an excluded title only when it is confirmed by a source marker or known template; ambiguous manual prefixes remain unchanged and appear in the preview warnings.
+
 ## 0.5.0 - 2026-08-09
 
 ### Added

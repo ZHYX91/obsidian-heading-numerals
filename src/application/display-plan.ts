@@ -55,7 +55,7 @@ export function createDisplayPlan(
   const decorations: DisplayDecorationPlan[] = [];
   for (const item of numbered) {
     const { heading } = item;
-    if (item.label == null || heading.content.trim().length === 0) {
+    if (heading.content.trim().length === 0) {
       continue;
     }
     const analysis = analyzeHeadingPrefix(heading, item.label, options.templateSources);
@@ -68,6 +68,22 @@ export function createDisplayPlan(
     ) {
       continue;
     }
+    if (item.exclusion != null) {
+      if (options.concealStoredNumbers) {
+        const first = matches[0];
+        if (first != null && first.from === 0 && meetsCleanupScope(first, options.cleanupScope)) {
+          decorations.push({
+            kind: "conceal",
+            from: heading.contentFrom,
+            to: heading.contentFrom + first.to,
+            label: "",
+            line: heading.line,
+          });
+        }
+      }
+      continue;
+    }
+    if (item.label == null) continue;
     let concealTo = 0;
     if (options.concealStoredNumbers) {
       for (const match of matches) {

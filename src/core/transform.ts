@@ -166,6 +166,42 @@ export function planHeadingTransform(
       continue;
     }
 
+    if (item.exclusion != null) {
+      if (first == null) {
+        if (analysis.suspicious) {
+          warnings.push({
+            line: heading.line,
+            heading: content,
+            code: "ambiguous-prefix",
+            detail: "The excluded heading has a suspicious prefix that was preserved.",
+          });
+        }
+        continue;
+      }
+      if (matches.length > 1 || (first.provenance !== "plugin" && first.provenance !== "template")) {
+        warnings.push({
+          line: heading.line,
+          heading: content,
+          code: "ambiguous-prefix",
+          detail: "The excluded heading kept a prefix that could not be confirmed as plugin-managed.",
+        });
+        continue;
+      }
+      changes.push({
+        from: heading.contentFrom,
+        to: heading.contentFrom + first.to,
+        insert: "",
+        line: heading.line,
+        level: heading.level,
+        before: content,
+        after: previewAfter(content, 0, first.to, ""),
+        ruleId: "remove-excluded-number",
+        confidence: first.confidence,
+        provenance: first.provenance,
+      });
+      continue;
+    }
+
     if (item.label == null) {
       continue;
     }

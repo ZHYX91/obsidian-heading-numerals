@@ -101,4 +101,26 @@ describe("display plan", () => {
       concealStoredNumbers: true,
     }))).toEqual([]);
   });
+
+  it("does not render excluded titles and can conceal a confirmed stored prefix", () => {
+    const source = "# 1 First\n# 2 References\n# 3 Next";
+    const plan = createDisplayPlan(parseAtxHeadings(source), options({
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+      numbering: {
+        ...numbering,
+        scheme: {
+          ...numbering.scheme,
+          exclusions: [{ title: "References", scope: "heading" }],
+        },
+      },
+    }));
+    expect(plan.map((item) => ({ kind: item.kind, line: item.line, label: item.label }))).toEqual([
+      { kind: "conceal", line: 0, label: "" },
+      { kind: "virtual", line: 0, label: "1" },
+      { kind: "conceal", line: 1, label: "" },
+      { kind: "conceal", line: 2, label: "" },
+      { kind: "virtual", line: 2, label: "2" },
+    ]);
+  });
 });

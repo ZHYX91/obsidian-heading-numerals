@@ -1,6 +1,7 @@
 import {
   App,
   Modal,
+  MarkdownView,
   PluginSettingTab,
   Setting,
   type SettingDefinitionItem,
@@ -17,6 +18,7 @@ import { getDeclarativeSettingDefinitions } from "../ui/settings/definitions";
 import { createSettingsTabs, type SettingsTabId } from "../ui/settings/tabs";
 import type HeadingNumeralsPlugin from "./plugin";
 import { SchemeSettingsRenderer, selectedSchemeName } from "./scheme-settings-renderer";
+import { parseAtxHeadings } from "../core/heading-parser";
 import type { SettingsImpact } from "./settings-impact";
 import {
   applySettingsControlValue,
@@ -107,6 +109,10 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       () => this.plugin.settings,
       (update, impact, immediate, rerender) => this.commit(update, impact, immediate, rerender),
       t,
+      () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        return view == null ? [] : parseAtxHeadings(view.editor.getValue());
+      },
     );
   }
 

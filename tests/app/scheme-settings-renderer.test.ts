@@ -15,6 +15,7 @@ describe("scheme settings renderer", () => {
         revision: 1,
         baseLevel: 1,
         templates: ["{1.arabic}", "", "", "", "", ""],
+        exclusions: [],
       }],
       hiddenBuiltInSchemeIds: [...BUILT_IN_SCHEME_IDS],
     });

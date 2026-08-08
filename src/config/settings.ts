@@ -5,6 +5,7 @@ import {
   type CleanupTemplateHistory,
   type CleanupTemplateSource,
   type CustomNumberingScheme,
+  type HeadingExclusionRule,
   displayModeToPreferences,
   type MissingLevelStrategy,
   type NumberingOptions,
@@ -14,7 +15,7 @@ import { compileTemplate } from "../core/template-compiler";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
 export interface HeadingNumeralsSettings {
-  schemaVersion: 3;
+  schemaVersion: 4;
   language: "auto" | "en" | "zh";
   showVirtualNumbers: boolean;
   concealStoredNumbers: boolean;
@@ -70,7 +71,7 @@ export const DEFAULT_CUSTOM_TEMPLATES = [
 ];
 
 export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   language: "auto",
   showVirtualNumbers: false,
   concealStoredNumbers: false,
@@ -88,8 +89,8 @@ export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
   enableLivePreview: true,
   enableReadingView: true,
   enableSourceMode: false,
-  virtualOpacity: 0.62,
-  virtualGapEm: 0.35,
+  virtualOpacity: 0.82,
+  virtualGapEm: 0.32,
   excludedFolders: [],
   batchBackupLimitMb: 12,
 };
@@ -128,6 +129,23 @@ function validCustomId(value: unknown): value is string {
     && !isBuiltInSchemeId(value);
 }
 
+function sanitizeExclusions(value: unknown): HeadingExclusionRule[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const output: HeadingExclusionRule[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.title !== "string") continue;
+    const title = item.title.normalize("NFC").trim().replace(/[ \t]+/gu, " ").slice(0, 200);
+    if (title.length === 0 || seen.has(title)) continue;
+    seen.add(title);
+    output.push({
+      title,
+      scope: item.scope === "heading" ? "heading" : "subtree",
+    });
+  }
+  return output;
+}
+
 function sanitizeCustomSchemes(value: unknown): CustomNumberingScheme[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
@@ -145,6 +163,7 @@ function sanitizeCustomSchemes(value: unknown): CustomNumberingScheme[] {
       revision: Math.max(1, Math.trunc(boundedNumber(item.revision, 1, 1, Number.MAX_SAFE_INTEGER))),
       baseLevel: Math.trunc(boundedNumber(item.baseLevel, 1, 1, 6)),
       templates: nextTemplates,
+      exclusions: sanitizeExclusions(item.exclusions),
     });
   }
   return output;
@@ -175,6 +194,7 @@ function sanitizeCleanupHistory(value: unknown): CleanupTemplateHistory[] {
 
 export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
   const raw = isRecord(value) ? value : {};
+  const legacySchemaVersion = typeof raw.schemaVersion === "number" ? raw.schemaVersion : 0;
   const legacyDisplayMode = oneOf(raw.displayMode, DISPLAY_MODES, "normal");
   const legacyDisplay = displayModeToPreferences(legacyDisplayMode);
   const customSchemes = sanitizeCustomSchemes(raw.customSchemes);
@@ -188,6 +208,7 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
       revision: 1,
       baseLevel: Math.trunc(boundedNumber(raw.customBaseLevel, 1, 1, 6)),
       templates: legacyTemplates,
+      exclusions: [],
     });
   }
   const requestedScheme = typeof raw.selectedSchemeId === "string"
@@ -210,7 +231,7 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
     : [];
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     language: oneOf(raw.language, ["auto", "en", "zh"] as const, DEFAULT_SETTINGS.language),
     showVirtualNumbers: booleanOr(raw.showVirtualNumbers, legacyDisplay.showVirtualNumbers),
     concealStoredNumbers: booleanOr(raw.concealStoredNumbers, legacyDisplay.concealStoredNumbers),
@@ -237,8 +258,18 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
     enableLivePreview: booleanOr(raw.enableLivePreview, DEFAULT_SETTINGS.enableLivePreview),
     enableReadingView: booleanOr(raw.enableReadingView, DEFAULT_SETTINGS.enableReadingView),
     enableSourceMode: booleanOr(raw.enableSourceMode, DEFAULT_SETTINGS.enableSourceMode),
-    virtualOpacity: boundedNumber(raw.virtualOpacity, DEFAULT_SETTINGS.virtualOpacity, 0.15, 1),
-    virtualGapEm: boundedNumber(raw.virtualGapEm, DEFAULT_SETTINGS.virtualGapEm, 0, 2),
+    virtualOpacity: boundedNumber(
+      legacySchemaVersion < 4 && raw.virtualOpacity === 0.62 ? DEFAULT_SETTINGS.virtualOpacity : raw.virtualOpacity,
+      DEFAULT_SETTINGS.virtualOpacity,
+      0.15,
+      1,
+    ),
+    virtualGapEm: boundedNumber(
+      legacySchemaVersion < 4 && raw.virtualGapEm === 0.35 ? DEFAULT_SETTINGS.virtualGapEm : raw.virtualGapEm,
+      DEFAULT_SETTINGS.virtualGapEm,
+      0,
+      2,
+    ),
     excludedFolders,
     batchBackupLimitMb: boundedNumber(
       raw.batchBackupLimitMb,
@@ -297,6 +328,7 @@ export function cloneSettings(settings: HeadingNumeralsSettings): HeadingNumeral
     customSchemes: settings.customSchemes.map((scheme) => ({
       ...scheme,
       templates: [...scheme.templates],
+      exclusions: scheme.exclusions.map((rule) => ({ ...rule })),
     })),
     hiddenBuiltInSchemeIds: [...settings.hiddenBuiltInSchemeIds],
     cleanupHistory: settings.cleanupHistory.map((entry) => ({

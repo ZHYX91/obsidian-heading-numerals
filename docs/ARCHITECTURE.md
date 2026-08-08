@@ -18,6 +18,7 @@ Markdown source
 - `src/core/heading-parser.ts` scans ATX headings while excluding YAML, fenced code, HTML comments, and HTML blocks. It returns source offsets and never imports Obsidian.
 - `src/core/template-compiler.ts` parses placeholders into a small literal/counter AST used for rendering, validation, and exact template-prefix recognition.
 - `src/core/number-parser.ts` classifies plugin, template, and manual prefixes with provenance, style, rule ID, and confidence. `src/core/prefix-analysis.ts` is the one entry point shared by writes and displays.
+- `src/core/heading-exclusions.ts` normalizes exact exclusion titles and derives safe logical-title candidates. `numbering-engine.ts` applies heading-only and whole-subtree exclusions before incrementing counters, so writes, virtual display, Reading View, and batch operations share one plan.
 - `src/core/numbering-engine.ts` owns H1-H6 counters, resets, starts, maximum level, and skipped-level strategy.
 - `src/core/schemes.ts` resolves immutable built-in and dynamically persisted custom schemes; number-format rendering is isolated in `number-formats.ts`.
 - `src/core/transform.ts` creates immutable changes and warnings before any write happens.

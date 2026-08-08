@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TFile, type App, type MarkdownPostProcessorContext } from "obsidian";
 
@@ -18,6 +18,16 @@ function settings(overrides: Partial<HeadingNumeralsSettings>): HeadingNumeralsS
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  window.Node.prototype.createSpan = function createSpan(): HTMLSpanElement {
+    const span = document.createElement("span");
+    this.appendChild(span);
+    return span;
+  };
+  Object.defineProperty(document, "win", { configurable: true, value: window });
+  Object.assign(window, { createFragment: () => document.createDocumentFragment() });
+});
 
 function harness(source: string, configured: HeadingNumeralsSettings) {
   let currentSource = source;
@@ -175,5 +185,46 @@ describe("HeadingReadingProcessor", () => {
     expect(heading.querySelector(".heading-numerals-concealed")?.textContent).toBe("1 ");
     expect(heading.querySelector(".heading-numerals-virtual")?.textContent).toBe("1 ");
     expect(heading.getAttribute("data-heading-numerals-mode")).toBe("show-conceal");
+  });
+
+  it("uses the selected custom scheme exclusions in Reading View", async () => {
+    const configured = settings({
+      showVirtualNumbers: true,
+      selectedSchemeId: "custom-exclusions",
+      customSchemes: [{
+        id: "custom-exclusions",
+        name: "Exclusions",
+        revision: 1,
+        baseLevel: 1,
+        templates: [
+          "{1.arabic}",
+          "{1.arabic}.{2.arabic}",
+          "{1.arabic}.{2.arabic}.{3.arabic}",
+          "",
+          "",
+          "",
+        ],
+        exclusions: [{ title: "References", scope: "subtree" }],
+      }],
+    });
+    const { processor, context, container } = harness(
+      "# First\n## References\n### Book\n## Next",
+      configured,
+    );
+    container.append(
+      document.createElement("h1"),
+      document.createElement("h2"),
+      document.createElement("h3"),
+      document.createElement("h2"),
+    );
+    ["First", "References", "Book", "Next"].forEach((title, index) => {
+      container.children[index]!.textContent = title;
+    });
+
+    await processor.process(container, context);
+
+    expect(Array.from(container.children).map((heading) => (
+      heading.querySelector(".heading-numerals-virtual")?.textContent ?? null
+    ))).toEqual(["1 ", null, null, "1.1 "]);
   });
 });

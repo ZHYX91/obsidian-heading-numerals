@@ -1,18 +1,11 @@
 .heading-numerals-virtual {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-  opacity: var(--heading-numerals-virtual-opacity, 0.62);
+  opacity: var(--heading-numerals-virtual-opacity, 0.82);
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-}
-
-.cm-editor .heading-numerals-virtual {
-  margin-inline-end: var(--heading-numerals-virtual-gap, 0.35em);
-}
-
-.markdown-reading-view .heading-numerals-virtual {
-  margin-inline-end: var(--heading-numerals-virtual-gap, 0.35em);
+  margin-inline-end: var(--heading-numerals-virtual-gap, 0.32em);
 }
 
 .heading-numerals-concealed {
@@ -275,6 +268,28 @@
   margin-inline-start: var(--size-4-4);
 }
 
+.heading-numerals-exclusion-list .setting-item {
+  padding-block: 0.45em;
+}
+
+.heading-numerals-exclusion-list .setting-item-info {
+  display: none;
+}
+
+.heading-numerals-exclusion-list .setting-item-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: 100%;
+}
+
+.heading-numerals-exclusion-list input {
+  width: 100%;
+}
+
+.heading-numerals-exclusion-preview {
+  margin-block: 0.35em 0.8em;
+}
+
 .heading-numerals-template-validation:not([hidden]) {
   color: var(--text-error);
   margin-block: var(--size-4-2);
@@ -456,6 +471,14 @@
 
   .heading-numerals-diff {
     grid-template-columns: 1fr;
+  }
+
+  .heading-numerals-exclusion-list .setting-item-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .heading-numerals-exclusion-list .setting-item-control input {
+    grid-column: 1 / -1;
   }
 
   .heading-numerals-note-control-modal {

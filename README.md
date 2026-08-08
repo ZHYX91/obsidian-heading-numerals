@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current release: `0.5.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
+> Current version: `0.6.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
 
 ## 中文
 
@@ -44,6 +44,13 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 - 中文公文：`一、`、`（一）`、`1.`、`（1）`、`①`
 - 法律条文：`第一编`、`第一章`、`第一节`、`第一条`
 - 自定义方案：可添加多个、修改、删除；内置方案可展开查看并复制成自定义方案
+
+自定义方案还可以添加“排除标题”。规则精确匹配移除已识别序号后的 Markdown 标题文本，命中的标题不会占用序号：
+
+- “整个章节”会跳过该标题及其全部后代，离开该章节后继续原有计数；这是默认且更安全的选择。
+- “仅此标题”只跳过当前标题，其后代按现有“标题跨级策略”处理，不会错误继承上一个编号章节。
+
+排除规则不支持模糊匹配或正则表达式；空白和重复规则无法保存。设置页会显示当前笔记的命中数量和标题，内置方案需先复制为自定义方案才能添加规则。重新编号时，只有来源标记或已知模板能够确认的旧序号会从排除标题中移除；有歧义的人工前缀仍会保留并显示在预览警告中。
 
 占位符写法是 `{标题层级.数字格式}`。例如 `{1.arabic}` 表示“把 H1 的计数显示为阿拉伯数字”，`{2.chinese_lower}` 表示“把 H2 的计数显示为中文小写数字”。设置页会直接列出并预览所有格式：
 
@@ -111,6 +118,7 @@ heading-numerals-start:
 - Override virtual display, stored-number concealment, scheme, cleanup scope, and starting counters per note through Properties.
 - Open a compact current-note control panel from the left ribbon, with global, override, and effective values shown side by side.
 - Add, edit, and delete multiple custom schemes while retaining retired template revisions for cleanup.
+- Exclude exact heading titles from a custom scheme, either for that heading alone or for its whole subtree, with live current-note match feedback.
 - Use English or Simplified Chinese UI text.
 
 ### Safety and source control
@@ -133,11 +141,13 @@ A placeholder uses `{heading-level.number-format}`. For example, `{1.arabic}` re
 
 The default cleanup scope recognizes plugin markers plus all current and retired built-in/custom templates. The broader common-manual-number scope is opt-in and always previewed. Similar-looking user-authored numbers are never silently removed.
 
+Custom schemes can also exclude exact Markdown heading titles. A whole-section rule skips the matched heading and all descendants; a heading-only rule leaves descendants to the configured skipped-level strategy. Excluded headings do not consume counters. Existing prefixes are removed during renumbering only when a marker or known template confirms that they are plugin-managed.
+
 ### Compatibility and limitations
 
 - Requires Obsidian 1.12.7+ on desktop or mobile. Windows and an Android 15 emulator have dated records; physical Android devices, macOS, and Linux remain separate open acceptance targets.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.5.0.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.6.0.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.

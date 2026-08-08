@@ -55,4 +55,54 @@ describe("numberHeadings", () => {
     expect(formatCounter(27, "letter_upper")).toBe("AA");
     expect(formatCounter(14, "roman_lower")).toBe("xiv");
   });
+
+  it("excludes one exact heading without consuming its counter", () => {
+    const result = numberHeadings(
+      parseAtxHeadings("# First\n# References\n# Next"),
+      options({
+        scheme: {
+          ...BUILT_IN_SCHEMES.hierarchical,
+          exclusions: [{ title: "References", scope: "heading" }],
+        },
+      }),
+    );
+    expect(result.map((item) => ({ label: item.label, exclusion: item.exclusion }))).toEqual([
+      { label: "1", exclusion: null },
+      { label: null, exclusion: "heading" },
+      { label: "2", exclusion: null },
+    ]);
+  });
+
+  it("excludes a whole subtree and resumes the surrounding level", () => {
+    const result = numberHeadings(
+      parseAtxHeadings("# First\n## Body\n## References\n### Book\n## Next"),
+      options({
+        scheme: {
+          ...BUILT_IN_SCHEMES.hierarchical,
+          exclusions: [{ title: "References", scope: "subtree" }],
+        },
+      }),
+    );
+    expect(result.map((item) => ({ label: item.label, exclusion: item.exclusion }))).toEqual([
+      { label: "1", exclusion: null },
+      { label: "1.1", exclusion: null },
+      { label: null, exclusion: "subtree" },
+      { label: null, exclusion: "subtree" },
+      { label: "1.2", exclusion: null },
+    ]);
+  });
+
+  it("routes heading-only descendants through the missing-level strategy", () => {
+    const scheme = {
+      ...BUILT_IN_SCHEMES.hierarchical,
+      exclusions: [{ title: "Interlude", scope: "heading" as const }],
+    };
+    const headings = parseAtxHeadings("# First\n## Interlude\n### Detail");
+    expect(numberHeadings(headings, options({ scheme, missingLevelStrategy: "fill-one" }))[2]?.label)
+      .toBe("1.1.1");
+    expect(numberHeadings(headings, options({ scheme, missingLevelStrategy: "current-only" }))[2]?.label)
+      .toBe("1");
+    expect(numberHeadings(headings, options({ scheme, missingLevelStrategy: "skip" }))[2])
+      .toMatchObject({ label: null, warning: "missing-parent" });
+  });
 });

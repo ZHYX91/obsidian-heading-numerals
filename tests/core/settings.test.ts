@@ -60,10 +60,23 @@ describe("settings", () => {
       showVirtualNumbers: true,
       concealStoredNumbers: true,
     })).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       showVirtualNumbers: true,
       concealStoredNumbers: true,
     });
+  });
+
+  it("migrates the old virtual appearance defaults without overwriting custom values", () => {
+    expect(sanitizeSettings({
+      schemaVersion: 3,
+      virtualOpacity: 0.62,
+      virtualGapEm: 0.35,
+    })).toMatchObject({ virtualOpacity: 0.82, virtualGapEm: 0.32 });
+    expect(sanitizeSettings({
+      schemaVersion: 3,
+      virtualOpacity: 0.7,
+      virtualGapEm: 0.5,
+    })).toMatchObject({ virtualOpacity: 0.7, virtualGapEm: 0.5 });
   });
 
   it("accepts the combined legacy frontmatter mode and explicit per-feature overrides", () => {
@@ -123,6 +136,38 @@ describe("settings", () => {
     const sources = cleanupTemplateSources(configured);
     expect(sources.some((source) => source.schemeId === "custom-guide" && source.revision === 2)).toBe(true);
     expect(sources.some((source) => source.schemeId === "custom-guide" && source.revision === 1)).toBe(true);
+  });
+
+  it("sanitizes exact custom-scheme exclusions and migrates old schemes to an empty list", () => {
+    const configured = sanitizeSettings({
+      customSchemes: [{
+        id: "custom-guide",
+        name: "Guide",
+        revision: 1,
+        baseLevel: 1,
+        templates: ["{1.arabic}", "", "", "", "", ""],
+        exclusions: [
+          { title: "  References  ", scope: "heading" },
+          { title: "References", scope: "subtree" },
+          { title: "Appendix", scope: "invalid" },
+          { title: "", scope: "heading" },
+        ],
+      }],
+    });
+    expect(configured.schemaVersion).toBe(4);
+    expect(configured.customSchemes[0]?.exclusions).toEqual([
+      { title: "References", scope: "heading" },
+      { title: "Appendix", scope: "subtree" },
+    ]);
+    expect(sanitizeSettings({
+      customSchemes: [{
+        id: "custom-old",
+        name: "Old",
+        revision: 1,
+        baseLevel: 1,
+        templates: ["{1.arabic}", "", "", "", "", ""],
+      }],
+    }).customSchemes[0]?.exclusions).toEqual([]);
   });
 
   it("does not silently discard older cleanup templates", () => {

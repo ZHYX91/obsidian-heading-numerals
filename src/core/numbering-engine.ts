@@ -1,4 +1,5 @@
 import { renderCurrentLevel, renderTemplate } from "./schemes";
+import { matchHeadingExclusion } from "./heading-exclusions";
 import type {
   Counters,
   NumberedHeading,
@@ -24,27 +25,62 @@ export function numberHeadings(
   const maxLevel = Math.min(6, Math.max(scheme.baseLevel, Math.trunc(options.maxLevel)));
   const starts = Array.from({ length: 6 }, (_unused, index) => normalizedStart(options, index + 1));
   const counters = starts.map((start) => start - 1) as Counters;
-  const seen = [false, false, false, false, false, false];
+  const initialized = [false, false, false, false, false, false];
+  const active = [false, false, false, false, false, false];
   const output: NumberedHeading[] = [];
+  let excludedSubtreeLevel: number | null = null;
 
   for (const heading of headings) {
     const index = heading.level - 1;
-    const currentCounter = seen[index] ? (counters[index] ?? 0) : (starts[index] ?? 1) - 1;
+    if (excludedSubtreeLevel != null && heading.level > excludedSubtreeLevel) {
+      output.push({
+        heading,
+        label: null,
+        counters: cloneCounters(counters),
+        warning: null,
+        exclusion: "subtree",
+      });
+      continue;
+    }
+    if (excludedSubtreeLevel != null) excludedSubtreeLevel = null;
+
+    const exclusion = matchHeadingExclusion(heading, scheme);
+    if (exclusion != null) {
+      active[index] = false;
+      for (let lower = index + 1; lower < 6; lower += 1) {
+        counters[lower] = (starts[lower] ?? 1) - 1;
+        initialized[lower] = false;
+        active[lower] = false;
+      }
+      if (exclusion.scope === "subtree") excludedSubtreeLevel = heading.level;
+      output.push({
+        heading,
+        label: null,
+        counters: cloneCounters(counters),
+        warning: null,
+        exclusion: exclusion.scope,
+      });
+      continue;
+    }
+
+    const currentCounter = initialized[index] ? (counters[index] ?? 0) : (starts[index] ?? 1) - 1;
     counters[index] = currentCounter + 1;
-    seen[index] = true;
+    initialized[index] = true;
+    active[index] = true;
     for (let lower = index + 1; lower < 6; lower += 1) {
       counters[lower] = (starts[lower] ?? 1) - 1;
-      seen[lower] = false;
+      initialized[lower] = false;
+      active[lower] = false;
     }
 
     if (heading.level < scheme.baseLevel || heading.level > maxLevel) {
-      output.push({ heading, label: null, counters: cloneCounters(counters), warning: null });
+      output.push({ heading, label: null, counters: cloneCounters(counters), warning: null, exclusion: null });
       continue;
     }
 
     const missing: number[] = [];
     for (let parent = scheme.baseLevel - 1; parent < index; parent += 1) {
-      if (!seen[parent]) {
+      if (!active[parent]) {
         missing.push(parent);
       }
     }
@@ -54,13 +90,15 @@ export function numberHeadings(
         label: null,
         counters: cloneCounters(counters),
         warning: "missing-parent",
+        exclusion: null,
       });
       continue;
     }
     if (missing.length > 0 && options.missingLevelStrategy === "fill-one") {
       for (const parent of missing) {
         counters[parent] = starts[parent] ?? 1;
-        seen[parent] = true;
+        initialized[parent] = true;
+        active[parent] = true;
       }
     }
 
@@ -74,6 +112,7 @@ export function numberHeadings(
       label: label.trim().length === 0 ? null : label,
       counters: currentCounters,
       warning: null,
+      exclusion: null,
     });
   }
 
