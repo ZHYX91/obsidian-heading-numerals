@@ -41,6 +41,10 @@ describe("Obsidian 1.13 settings definitions", () => {
       "Write and cleanup",
       "Display and batch",
     ]);
+    const serialized = JSON.stringify(definitions);
+    expect(serialized).toContain('"key":"general.showVirtualNumbers"');
+    expect(serialized).toContain('"key":"general.concealStoredNumbers"');
+    expect(serialized).not.toContain('"key":"general.displayMode"');
     expect(tab.containerEl.querySelector("[role=tablist]")).toBeNull();
   });
 
@@ -49,12 +53,17 @@ describe("Obsidian 1.13 settings definitions", () => {
     const tab = new HeadingNumeralsSettingTab(new App(), host as never);
 
     expect(tab.getControlValue("general.language")).toBe("auto");
+    expect(tab.getControlValue("general.showVirtualNumbers")).toBe(false);
     await tab.setControlValue("general.language", "zh");
+    await tab.setControlValue("general.showVirtualNumbers", true);
+    await tab.setControlValue("general.concealStoredNumbers", true);
     await tab.setControlValue("views.excludedFolders", "Private, /Archive/, Private");
 
     expect(host.settings.language).toBe("zh");
+    expect(host.settings.showVirtualNumbers).toBe(true);
+    expect(host.settings.concealStoredNumbers).toBe(true);
     expect(host.settings.excludedFolders).toEqual(["Private", "Archive"]);
-    expect(host.saveSettings).toHaveBeenCalledTimes(1);
+    expect(host.saveSettings).toHaveBeenCalledTimes(3);
     expect(host.scheduleSettings).toHaveBeenCalledTimes(1);
   });
 

@@ -13,7 +13,7 @@ export class RecoveryStore {
   }
 
   async load(): Promise<LastBatchSnapshot | null> {
-    for (const path of [this.path, this.temporaryPath]) {
+    for (const path of [this.temporaryPath, this.path]) {
       if (!await this.app.vault.adapter.exists(path)) continue;
       try {
         return sanitizeLastBatch(JSON.parse(await this.app.vault.adapter.read(path)));
@@ -26,8 +26,8 @@ export class RecoveryStore {
 
   async save(snapshot: LastBatchSnapshot | null): Promise<void> {
     if (snapshot == null) {
-      await this.removeIfPresent(this.path);
       await this.removeIfPresent(this.temporaryPath);
+      await this.removeIfPresent(this.path);
       return;
     }
     await this.app.vault.adapter.write(this.temporaryPath, `${JSON.stringify(snapshot, null, 2)}\n`);

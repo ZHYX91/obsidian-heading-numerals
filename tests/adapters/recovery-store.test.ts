@@ -51,4 +51,25 @@ describe("RecoveryStore", () => {
     const { store } = harness({ [path]: JSON.stringify(snapshot) });
     await expect(store.load()).resolves.toEqual(snapshot);
   });
+
+  it("prefers the newer pending snapshot when an interrupted promotion leaves both files", async () => {
+    const permanentPath = ".obsidian/plugins/heading-numerals/recovery.json";
+    const pendingPath = ".obsidian/plugins/heading-numerals/recovery.pending.json";
+    const older = { ...snapshot, createdAt: "2026-08-07T00:00:00.000Z" };
+    const { store } = harness({
+      [permanentPath]: JSON.stringify(older),
+      [pendingPath]: JSON.stringify(snapshot),
+    });
+    await expect(store.load()).resolves.toEqual(snapshot);
+  });
+
+  it("falls back to the permanent snapshot when the pending file is invalid", async () => {
+    const permanentPath = ".obsidian/plugins/heading-numerals/recovery.json";
+    const pendingPath = ".obsidian/plugins/heading-numerals/recovery.pending.json";
+    const { store } = harness({
+      [permanentPath]: JSON.stringify(snapshot),
+      [pendingPath]: "not json",
+    });
+    await expect(store.load()).resolves.toEqual(snapshot);
+  });
 });

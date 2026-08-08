@@ -17,9 +17,9 @@ interface CachedReadingPlan {
   readonly displayPlan: readonly DisplayDecorationPlan[];
 }
 
-interface ReadingPlanCacheEntry {
+interface ReadingPlanCacheEntry extends CachedReadingPlan {
+  readonly source: string;
   readonly fingerprint: string;
-  readonly promise: Promise<CachedReadingPlan>;
 }
 
 function headingElements(container: HTMLElement): HTMLHeadingElement[] {
@@ -120,34 +120,33 @@ export class HeadingReadingProcessor {
   }
 
   async process(container: HTMLElement, context: MarkdownPostProcessorContext): Promise<void> {
+    const rendered = headingElements(container);
+    for (const heading of rendered) cleanupHeading(heading);
+
     const settings = this.getSettings();
     if (!settings.enableReadingView) {
       return;
     }
     const effective = resolveNoteSettings(settings, parseNoteOverrides(context.frontmatter));
-    if (effective.disabled || effective.displayMode === "normal") {
+    if (effective.disabled || (!effective.showVirtualNumbers && !effective.concealStoredNumbers)) {
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(normalizePath(context.sourcePath));
     if (!(file instanceof TFile) || file.extension.toLowerCase() !== "md") {
       return;
     }
-    const fingerprint = JSON.stringify({
-      mtime: file.stat?.mtime ?? 0,
-      size: file.stat?.size ?? 0,
-      settings,
-      effective,
-    });
+    const source = await this.app.vault.cachedRead(file);
+    const fingerprint = JSON.stringify({ settings, effective });
     let cached = this.cache.get(file.path);
-    if (cached == null || cached.fingerprint !== fingerprint) {
-      const promise = this.buildPlan(file, settings, effective);
-      cached = { fingerprint, promise };
+    if (cached == null || cached.fingerprint !== fingerprint || cached.source !== source) {
+      cached = {
+        source,
+        fingerprint,
+        ...this.buildPlan(source, settings, effective),
+      };
       this.cache.set(file.path, cached);
-      void promise.catch(() => {
-        if (this.cache.get(file.path)?.promise === promise) this.cache.delete(file.path);
-      });
     }
-    const { headings, displayPlan } = await cached.promise;
+    const { headings, displayPlan } = cached;
     const section = context.getSectionInfo(container);
     if (section == null || !container.isConnected) {
       return;
@@ -155,7 +154,6 @@ export class HeadingReadingProcessor {
     const sectionHeadings = headings.filter((heading) => (
       heading.line >= section.lineStart && heading.line <= section.lineEnd
     ));
-    const rendered = headingElements(container);
     if (
       rendered.length !== sectionHeadings.length
       || rendered.some((element, index) => {
@@ -165,39 +163,53 @@ export class HeadingReadingProcessor {
     ) {
       return;
     }
-    const planByLine = new Map(displayPlan.map((item) => [item.line, item]));
+    const planByLine = new Map<number, DisplayDecorationPlan[]>();
+    for (const item of displayPlan) {
+      const items = planByLine.get(item.line) ?? [];
+      items.push(item);
+      planByLine.set(item.line, items);
+    }
     for (let index = 0; index < rendered.length; index += 1) {
       const element = rendered[index];
       const sourceHeading = sectionHeadings[index];
       if (element == null || sourceHeading == null) {
         continue;
       }
-      cleanupHeading(element);
-      const item = planByLine.get(sourceHeading.line);
-      if (item?.kind === "virtual") {
-        prependVirtualNumber(element, item.label);
-        element.setAttribute("data-heading-numerals-mode", "show");
-      } else if (item?.kind === "conceal") {
-        const prefixLength = item.to - item.from;
+      const items = planByLine.get(sourceHeading.line) ?? [];
+      const conceal = items.find((item) => item.kind === "conceal");
+      const virtual = items.find((item) => item.kind === "virtual");
+      let concealed = false;
+      if (conceal != null) {
+        const prefixLength = conceal.to - conceal.from;
         const prefix = sourceHeading.content.slice(0, prefixLength);
         if (concealPrefix(element, prefix)) {
-          element.setAttribute("data-heading-numerals-mode", "conceal");
+          concealed = true;
         }
+      }
+      if (virtual != null && (conceal == null || concealed)) {
+        prependVirtualNumber(element, virtual.label);
+      }
+      if (virtual != null && concealed) {
+        element.setAttribute("data-heading-numerals-mode", "show-conceal");
+      } else if (virtual != null) {
+        element.setAttribute("data-heading-numerals-mode", "show");
+      } else if (concealed) {
+        element.setAttribute("data-heading-numerals-mode", "conceal");
       }
     }
   }
 
-  private async buildPlan(
-    file: TFile,
+  private buildPlan(
+    source: string,
     settings: HeadingNumeralsSettings,
     effective: ReturnType<typeof resolveNoteSettings>,
-  ): Promise<CachedReadingPlan> {
-    const source = await this.app.vault.cachedRead(file);
+  ): CachedReadingPlan {
     const headings = parseAtxHeadings(source);
     return {
       headings,
       displayPlan: createDisplayPlan(headings, {
-        mode: effective.displayMode,
+        showVirtualNumbers: effective.showVirtualNumbers,
+        concealStoredNumbers: effective.concealStoredNumbers,
         numbering: toNumberingOptions(settings, {
           schemeId: effective.schemeId,
           starts: effective.starts,

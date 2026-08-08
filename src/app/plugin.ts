@@ -7,6 +7,10 @@ import {
 } from "obsidian";
 
 import { RecoveryStore } from "../adapters/obsidian/recovery-store";
+import {
+  updateDisplayPreferences,
+  type DisplayPreferenceAction,
+} from "../application/display-preferences";
 import { BatchController } from "../commands/batch";
 import { runCurrentNoteOperation } from "../commands/current-note";
 import { createTranslator, type Translate } from "../config/i18n";
@@ -22,10 +26,18 @@ import {
   SettingsSaveCoordinator,
   type SettingsSaveStatus,
 } from "../config/settings-save-coordinator";
-import type { DisplayMode, TransformOperation } from "../core/types";
+import {
+  DISPLAY_MODES,
+  displayModeToPreferences,
+  preferencesToDisplayMode,
+  type DisplayMode,
+  type TransformOperation,
+} from "../core/types";
 import { HeadingDisplayController } from "../editor/heading-display-extension";
 import { HeadingReadingProcessor } from "../reading/heading-postprocessor";
 import { HeadingNumeralsSettingTab } from "./settings-tab";
+import { populateRibbonMenu } from "./ribbon-menu";
+import type { SettingsImpact } from "./settings-impact";
 
 export default class HeadingNumeralsPlugin extends Plugin {
   override settings: HeadingNumeralsSettings = { ...DEFAULT_SETTINGS };
@@ -46,7 +58,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       await this.recoveryStore.save(data.lastBatch);
     }
     this.settingsCoordinator = new SettingsSaveCoordinator(async (snapshot) => {
-      await this.saveData({ schemaVersion: 2, settings: snapshot });
+      await this.saveData({ schemaVersion: 3, settings: snapshot });
     });
     await this.settingsCoordinator.save(cloneSettings(this.settings)).catch((error: unknown) => {
       console.error("Heading Numerals: initial settings migration remains pending", error);
@@ -117,7 +129,10 @@ export default class HeadingNumeralsPlugin extends Plugin {
   }
 
   private registerCommands(): void {
-    const commandNames: ReadonlyArray<readonly [DisplayMode, Parameters<Translate>[0]]> = [
+    const commandNames: ReadonlyArray<readonly [
+      Exclude<DisplayMode, "show-conceal">,
+      Parameters<Translate>[0],
+    ]> = [
       ["normal", "command.mode.normal"],
       ["show", "command.mode.show"],
       ["conceal", "command.mode.conceal"],
@@ -126,7 +141,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       this.addCommand({
         id: `set-view-mode-${mode}`,
         name: this.translate()(key),
-        callback: () => void this.setDisplayMode(mode).catch((error: unknown) => {
+        callback: () => void this.updateDisplayPreference(mode).catch((error: unknown) => {
           console.error("Heading Numerals: failed to save view mode", error);
         }),
       });
@@ -143,7 +158,8 @@ export default class HeadingNumeralsPlugin extends Plugin {
         id,
         name: this.translate()(key),
         checkCallback: (checking) => {
-          const available = this.app.workspace.getActiveViewOfType(MarkdownView)?.file != null;
+          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+          const available = view?.file != null && view.getMode() === "source";
           if (!checking && available) {
             this.runCurrent(operation);
           }
@@ -185,27 +201,13 @@ export default class HeadingNumeralsPlugin extends Plugin {
   private addRibbon(): void {
     this.addRibbonIcon("list-ordered", "Heading Numerals", (event) => {
       const menu = new Menu();
-      for (const mode of ["normal", "show", "conceal"] as const) {
-        menu.addItem((item) => item
-          .setTitle(this.translate()(`mode.${mode}`))
-          .setChecked(this.settings.displayMode === mode)
-          .onClick(() => void this.setDisplayMode(mode).catch((error: unknown) => {
-            console.error("Heading Numerals: failed to save view mode", error);
-          })));
-      }
-      menu.addSeparator();
-      for (const operation of ["write", "remove", "renumber", "strip-markers"] as const) {
-        const key = operation === "strip-markers"
-          ? "command.strip.current"
-          : `command.${operation}.current` as const;
-        menu.addItem((item) => item
-          .setTitle(this.translate()(key))
-          .onClick(() => this.runCurrent(operation)));
-      }
-      menu.addSeparator();
-      menu.addItem((item) => item
-        .setTitle(this.translate()("command.batch.folder"))
-        .onClick(() => this.batchController?.open(this.translate())));
+      populateRibbonMenu(menu, this.settings, this.translate(), {
+        updateDisplay: (action) => void this.updateDisplayPreference(action).catch((error: unknown) => {
+          console.error("Heading Numerals: failed to update display preference", error);
+        }),
+        runCurrent: (operation) => this.runCurrent(operation),
+        openBatch: () => this.batchController?.open(this.translate()),
+      });
       menu.showAtMouseEvent(event);
     });
   }
@@ -214,22 +216,43 @@ export default class HeadingNumeralsPlugin extends Plugin {
     runCurrentNoteOperation(this.app, this.settings, operation, this.translate());
   }
 
-  private async setDisplayMode(mode: DisplayMode): Promise<void> {
+  private async updateDisplayPreference(mode: DisplayPreferenceAction): Promise<void> {
     const next = cloneSettings(this.settings);
-    next.displayMode = mode;
+    const update = updateDisplayPreferences(next, mode);
+    next.showVirtualNumbers = update.showVirtualNumbers;
+    next.concealStoredNumbers = update.concealStoredNumbers;
     await this.saveSettings(next, "display");
-    new Notice(this.translate()("notice.mode", { mode: this.translate()(`mode.${mode}`) }));
+    new Notice(this.translate()(update.noticeKey));
   }
 
   private async cycleNoteMode(file: TFile): Promise<void> {
-    let nextMode: "show" | "conceal" | "normal" | "inherit" = "show";
+    let nextMode: DisplayMode | "inherit" = "show";
     await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
       const values = frontmatter as Record<string, unknown>;
-      const current = values["heading-numerals"];
-      nextMode = current === "show"
-        ? "conceal"
-        : current === "conceal" ? "normal"
-          : current === "normal" ? "inherit" : "show";
+      const legacy = values["heading-numerals"];
+      const legacyMode = typeof legacy === "string" && DISPLAY_MODES.includes(legacy as DisplayMode)
+        ? legacy as DisplayMode
+        : null;
+      const legacyPreferences = legacyMode == null ? null : displayModeToPreferences(legacyMode);
+      const currentMode = legacyPreferences == null
+        && typeof values["heading-numerals-show-virtual"] !== "boolean"
+        && typeof values["heading-numerals-conceal-stored"] !== "boolean"
+        ? "inherit"
+        : preferencesToDisplayMode({
+          showVirtualNumbers: typeof values["heading-numerals-show-virtual"] === "boolean"
+            ? values["heading-numerals-show-virtual"]
+            : legacyPreferences?.showVirtualNumbers ?? this.settings.showVirtualNumbers,
+          concealStoredNumbers: typeof values["heading-numerals-conceal-stored"] === "boolean"
+            ? values["heading-numerals-conceal-stored"]
+            : legacyPreferences?.concealStoredNumbers ?? this.settings.concealStoredNumbers,
+        });
+      nextMode = currentMode === "inherit"
+        ? "show"
+        : currentMode === "show" ? "conceal"
+          : currentMode === "conceal" ? "show-conceal"
+            : currentMode === "show-conceal" ? "normal" : "inherit";
+      delete values["heading-numerals-show-virtual"];
+      delete values["heading-numerals-conceal-stored"];
       if (nextMode === "inherit") {
         delete values["heading-numerals"];
       } else {
@@ -238,9 +261,9 @@ export default class HeadingNumeralsPlugin extends Plugin {
     });
     this.displayController?.refreshAll();
     this.rerenderReadingViews();
-    const resolvedMode = nextMode as "show" | "conceal" | "normal" | "inherit";
+    const resolvedMode = nextMode as DisplayMode | "inherit";
     const label = resolvedMode === "inherit"
-      ? this.translate()(`mode.${this.settings.displayMode}`)
+      ? this.translate()(`mode.${preferencesToDisplayMode(this.settings)}`)
       : this.translate()(`mode.${resolvedMode}`);
     new Notice(this.translate()("notice.mode", { mode: label }));
   }
@@ -308,5 +331,3 @@ export default class HeadingNumeralsPlugin extends Plugin {
     }
   }
 }
-
-export type SettingsImpact = "none" | "appearance" | "display" | "all";

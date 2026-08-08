@@ -16,6 +16,7 @@ Automated checks are necessary but do not prove Obsidian runtime behavior. Compl
 - [ ] Switch to Reading View and confirm numbering continues correctly across rendered sections.
 - [ ] Write numbers to the current note, inspect the preview, apply, then undo and redo once.
 - [ ] Conceal the stored numbers, move the cursor into each heading, select across a prefix, copy, and use a Chinese IME.
+- [ ] Enable virtual numbers and concealment together; each recognized stored prefix must be replaced by exactly one virtual number in Live Preview and Reading View.
 - [ ] Reload and disable the plugin; confirm source text remains accessible and Reading View DOM decoration disappears.
 
 ## Multi-pane and lifecycle
@@ -23,7 +24,7 @@ Automated checks are necessary but do not prove Obsidian runtime behavior. Compl
 - [ ] Open different notes in two panes with different Properties view modes.
 - [ ] Open a pop-out window and verify styling and independent view state.
 - [ ] Edit a heading to another heading of the same character length; decorations must update.
-- [ ] Edit Properties from `show` to `conceal` without changing file length; the mode must update.
+- [ ] Toggle `heading-numerals-show-virtual` and `heading-numerals-conceal-stored` without changing file length; both independent states must update immediately.
 - [ ] Scroll a note with at least 2,000 headings and record editing latency.
 
 ## Parser safety
@@ -52,6 +53,7 @@ Source markers are disabled by default. Before enabling them for a release claim
 - [ ] Apply a batch, then restore it; every file must be byte-identical to its original.
 - [ ] Independently edit one applied file; restore must cancel without changing any file.
 - [ ] Simulate a mid-batch error and confirm completed files roll back or remain recoverable from the pending snapshot.
+- [ ] Edit an already-written file while a later batch write fails; rollback must preserve that edit and retain recovery.
 - [ ] Excluded folders are not read into the preview and are not modified.
 - [ ] `data.json` contains settings only; recovery data is stored in `recovery.json`, and failed setting writes remain visibly retryable.
 
@@ -59,7 +61,9 @@ Source markers are disabled by default. Before enabling them for a release claim
 
 - [ ] Test the default theme and at least one third-party theme.
 - [ ] Test Windows desktop and one additional desktop platform before claiming cross-platform support.
-- [ ] Keep `isDesktopOnly: true` until mobile device acceptance is complete.
+- [ ] Keep `isDesktopOnly: true` until a dated mobile runtime acceptance record exists under
+  `docs/acceptance/`. Once mobile loading is enabled, preserve that platform baseline and continue
+  recording emulator, physical-device, and release-specific evidence as separate claims.
 
 ## Acceptance record
 

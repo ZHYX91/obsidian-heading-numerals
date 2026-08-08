@@ -1,6 +1,6 @@
 {
   "name": "obsidian-heading-numerals",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Write, remove, show, or conceal heading numbers in Obsidian.",
   "type": "module",
   "main": "dist/main.js",
@@ -14,8 +14,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "check:release": "node scripts/check-release.mjs",
-    "check": "npm run check:runtime && npm run lint && npm run typecheck && npm test && npm run build:bundle && npm run check:release",
-    "release:check": "npm run check"
+    "check": "npm run check:runtime && npm run lint && npm run typecheck && npm run test:coverage && npm run build:bundle && npm run check:release",
+    "release:check": "npm run check && node scripts/check-release-version.mjs"
   },
   "keywords": [
     "obsidian",

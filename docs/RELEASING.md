@@ -5,19 +5,18 @@ Heading Numerals follows the same numeric-tag and three-loose-asset convention a
 ## Local preflight
 
 1. Set the same stable version in `package.json`, `package-lock.json`, `manifest.json`, and `versions.json`.
-2. Run `npm ci` and `npm run release:check` on the intended commit.
-3. Run `node scripts/check-release-version.mjs x.y.z`.
-4. Complete and record the real Obsidian checks in `docs/ACCEPTANCE.md`.
-5. Confirm `git status --short` is clean and the intended commit is on `origin/main`.
+2. Complete and record the real Obsidian checks in `docs/ACCEPTANCE.md`.
+3. Commit the intended source and confirm `git status --short` is clean.
+4. Run `npm ci` and `npm run release:check` on that clean commit. The release check rejects untracked files and a reused tag that points elsewhere.
+5. Push the verified commit to `origin/main`; run `node scripts/check-release-version.mjs x.y.z` only if an explicit tag argument needs separate verification.
 
 ## Publication
 
-Push an immutable numeric tag such as `0.3.0`. `.github/workflows/release.yml` then:
+Push the new immutable numeric `x.y.z` tag. `.github/workflows/release.yml` then:
 
-- checks that the tag/version and default-branch source agree;
-- installs the exact Node/npm/dependency versions;
-- reruns the canonical release gate;
+- verifies the tag, default-branch ancestry, exact toolchain, dependencies, and canonical gates under read-only permissions;
 - creates a deterministic `heading-numerals-x.y.z.zip` containing the three runtime assets under `heading-numerals/`;
+- uploads one identified handoff artifact, then downloads and re-verifies that exact artifact in a separate write-enabled job;
 - attests the three loose assets and ZIP;
 - publishes the GitHub Release; and
 - downloads every published asset to compare bytes and verify provenance.

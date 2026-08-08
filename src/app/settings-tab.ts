@@ -13,63 +13,17 @@ import {
   type HeadingNumeralsSettings,
 } from "../config/settings";
 import type { SettingsSaveStatus } from "../config/settings-save-coordinator";
-import { BUILT_IN_SCHEMES, isBuiltInSchemeId } from "../core/schemes";
-import { compileTemplate, NUMBER_FORMATS, renderTemplate } from "../core/template-compiler";
-import { BUILT_IN_SCHEME_IDS, type CustomNumberingScheme } from "../core/types";
 import { getDeclarativeSettingDefinitions } from "../ui/settings/definitions";
 import { createSettingsTabs, type SettingsTabId } from "../ui/settings/tabs";
 import type HeadingNumeralsPlugin from "./plugin";
-import type { SettingsImpact } from "./plugin";
+import { SchemeSettingsRenderer, selectedSchemeName } from "./scheme-settings-renderer";
+import type { SettingsImpact } from "./settings-impact";
 import {
   applySettingsControlValue,
   getSettingsControlValue,
   isSettingsControlKey,
   type SettingsControlKey,
 } from "./settings-control-contract";
-
-const PREVIEW_COUNTERS = [2, 3, 4, 5, 6, 7] as [number, number, number, number, number, number];
-
-function builtInName(id: string, t: Translate): string {
-  return isBuiltInSchemeId(id) ? t(`scheme.${id}`) : id;
-}
-
-function customSchemeName(scheme: CustomNumberingScheme, t: Translate): string {
-  return scheme.id === "custom-migrated" && scheme.name === "Migrated custom scheme"
-    ? t("settings.scheme.migrated")
-    : scheme.name;
-}
-
-function newCustomId(settings: HeadingNumeralsSettings): string {
-  const prefix = `custom-${Date.now().toString(36)}`;
-  let id = prefix;
-  let suffix = 1;
-  while (settings.customSchemes.some((scheme) => scheme.id === id)) id = `${prefix}-${suffix++}`;
-  return id;
-}
-
-function archiveScheme(settings: HeadingNumeralsSettings, scheme: CustomNumberingScheme): void {
-  const key = `${scheme.id}@${scheme.revision}`;
-  if (settings.cleanupHistory.some((entry) => `${entry.schemeId}@${entry.revision}` === key)) return;
-  settings.cleanupHistory.push({
-    schemeId: scheme.id,
-    schemeName: scheme.name,
-    revision: scheme.revision,
-    baseLevel: scheme.baseLevel,
-    templates: [...scheme.templates],
-  });
-  settings.cleanupHistory = settings.cleanupHistory.slice(-100);
-}
-
-function firstAvailableScheme(settings: HeadingNumeralsSettings, excluding?: string): string {
-  const custom = settings.customSchemes.find((scheme) => scheme.id !== excluding);
-  if (custom != null) return custom.id;
-  const builtIn = BUILT_IN_SCHEME_IDS.find((id) => (
-    id !== excluding && !settings.hiddenBuiltInSchemeIds.includes(id)
-  ));
-  if (builtIn != null) return builtIn;
-  settings.hiddenBuiltInSchemeIds = settings.hiddenBuiltInSchemeIds.filter((id) => id !== "hierarchical-h2");
-  return "hierarchical-h2";
-}
 
 class ResetSettingsModal extends Modal {
   constructor(
@@ -111,14 +65,17 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const t = createTranslator(this.plugin.settings.language);
     return getDeclarativeSettingDefinitions({
       t,
-      selectedSchemeName: () => this.selectedSchemeName(createTranslator(this.plugin.settings.language)),
+      selectedSchemeName: () => selectedSchemeName(
+        this.plugin.settings,
+        createTranslator(this.plugin.settings.language),
+      ),
       renderSaveStatus: (setting) => {
         setting.settingEl.empty();
         setting.settingEl.addClass("heading-numerals-settings-save-row");
         return this.renderSaveStatus(setting.settingEl, t, true);
       },
-      renderSchemes: (container) => this.renderSchemes(container, t),
-      renderCleanupHistory: (container) => this.renderCleanupHistory(container, t),
+      renderSchemes: (container) => this.schemeRenderer(t).renderSchemes(container),
+      renderCleanupHistory: (container) => this.schemeRenderer(t).renderCleanupHistory(container),
       openResetModal: () => this.openResetModal(t),
     });
   }
@@ -137,6 +94,20 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       await this.plugin.saveSettings(mutation.settings, mutation.impact);
     }
     if (mutation.refreshSurface) this.refreshSurface();
+  }
+
+  private updateControl(key: SettingsControlKey, value: unknown): void {
+    void this.setControlValue(key, value).catch((error: unknown) => {
+      console.error(`Heading Numerals: failed to update setting ${key}`, error);
+    });
+  }
+
+  private schemeRenderer(t: Translate): SchemeSettingsRenderer {
+    return new SchemeSettingsRenderer(
+      () => this.plugin.settings,
+      (update, impact, immediate, rerender) => this.commit(update, impact, immediate, rerender),
+      t,
+    );
   }
 
   override hide(): void {
@@ -169,7 +140,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       target?.focus();
     });
     if (this.activeTab === "general") this.renderGeneral(layout.panel, t);
-    else if (this.activeTab === "schemes") this.renderSchemes(layout.panel, t);
+    else if (this.activeTab === "schemes") this.schemeRenderer(t).renderSchemes(layout.panel);
     else if (this.activeTab === "cleanup") this.renderCleanup(layout.panel, t);
     else this.renderViews(layout.panel, t);
     this.cleanup = () => {
@@ -177,13 +148,6 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       statusCleanup();
       containerEl.removeClass("heading-numerals-settings");
     };
-  }
-
-  private selectedSchemeName(t: Translate): string {
-    const { selectedSchemeId, customSchemes } = this.plugin.settings;
-    if (isBuiltInSchemeId(selectedSchemeId)) return builtInName(selectedSchemeId, t);
-    const custom = customSchemes.find((scheme) => scheme.id === selectedSchemeId);
-    return custom == null ? selectedSchemeId : customSchemeName(custom, t);
   }
 
   private openResetModal(t: Translate): void {
@@ -270,25 +234,22 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
         .addOption("en", t("language.en"))
         .addOption("zh", t("language.zh"))
         .setValue(this.plugin.settings.language)
-        .onChange((value) => this.commit((settings) => {
-          settings.language = value as HeadingNumeralsSettings["language"];
-        }, "none", true, true)));
+        .onChange((value) => this.updateControl("general.language", value)));
     new Setting(container)
-      .setName(t("settings.mode"))
-      .setDesc(t("settings.mode.desc"))
-      .addDropdown((dropdown) => dropdown
-        .addOption("normal", t("mode.normal"))
-        .addOption("show", t("mode.show"))
-        .addOption("conceal", t("mode.conceal"))
-        .setValue(this.plugin.settings.displayMode)
-        .onChange((value) => this.commit((settings) => {
-          settings.displayMode = value as HeadingNumeralsSettings["displayMode"];
-        }, "display", true)));
+      .setName(t("settings.showVirtual"))
+      .setDesc(t("settings.showVirtual.desc"))
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.showVirtualNumbers)
+        .onChange((value) => this.updateControl("general.showVirtualNumbers", value)));
+    new Setting(container)
+      .setName(t("settings.concealStored"))
+      .setDesc(t("settings.concealStored.desc"))
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.concealStoredNumbers)
+        .onChange((value) => this.updateControl("general.concealStoredNumbers", value)));
     new Setting(container)
       .setName(t("settings.maxLevel"))
       .addSlider((slider) => slider.setLimits(1, 6, 1).setDynamicTooltip()
         .setValue(this.plugin.settings.maxLevel)
-        .onChange((value) => this.commit((settings) => { settings.maxLevel = value; }, "display")));
+        .onChange((value) => this.updateControl("general.maxLevel", value)));
     new Setting(container)
       .setName(t("settings.missing"))
       .addDropdown((dropdown) => dropdown
@@ -296,9 +257,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
         .addOption("current-only", t("missing.current-only"))
         .addOption("skip", t("missing.skip"))
         .setValue(this.plugin.settings.missingLevelStrategy)
-        .onChange((value) => this.commit((settings) => {
-          settings.missingLevelStrategy = value as HeadingNumeralsSettings["missingLevelStrategy"];
-        }, "display", true)));
+        .onChange((value) => this.updateControl("general.missingLevelStrategy", value)));
     new Setting(container)
       .setName(t("settings.reset"))
       .setDesc(t("settings.reset.desc"))
@@ -307,182 +266,13 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       }));
   }
 
-  private renderSchemes(container: HTMLElement, t: Translate): void {
-    new Setting(container).setName(t("settings.scheme")).setHeading();
-    const settings = this.plugin.settings;
-    const visibleBuiltIns = BUILT_IN_SCHEME_IDS.filter((id) => !settings.hiddenBuiltInSchemeIds.includes(id));
-    new Setting(container)
-      .setName(t("settings.scheme"))
-      .setDesc(t("settings.scheme.desc"))
-      .addDropdown((dropdown) => {
-        for (const id of visibleBuiltIns) dropdown.addOption(id, builtInName(id, t));
-        for (const scheme of settings.customSchemes) dropdown.addOption(scheme.id, customSchemeName(scheme, t));
-        return dropdown.setValue(settings.selectedSchemeId).onChange((value) => this.commit((next) => {
-          next.selectedSchemeId = value;
-        }, "display", true, true));
-      })
-      .addButton((button) => button.setButtonText(t("settings.scheme.add")).setCta().onClick(() => {
-        this.commit((next) => {
-          const scheme: CustomNumberingScheme = {
-            id: newCustomId(next),
-            name: `${t("settings.scheme.custom")} ${next.customSchemes.length + 1}`,
-            revision: 1,
-            baseLevel: 1,
-            templates: ["{1.arabic}", "{1.arabic}.{2.arabic}", "", "", "", ""],
-          };
-          next.customSchemes.push(scheme);
-          next.selectedSchemeId = scheme.id;
-        }, "display", true, true);
-      }));
-    this.renderPlaceholderHelp(container, t);
-    for (const id of visibleBuiltIns) this.renderBuiltInScheme(container, id, t);
-    for (const scheme of settings.customSchemes) this.renderCustomScheme(container, scheme, t);
-    new Setting(container).setName(t("settings.scheme.hidden")).setHeading();
-    if (settings.hiddenBuiltInSchemeIds.length === 0) {
-      container.createEl("p", { cls: "setting-item-description", text: t("settings.scheme.noneHidden") });
-    }
-    for (const id of settings.hiddenBuiltInSchemeIds) {
-      new Setting(container).setName(builtInName(id, t)).addButton((button) => button
-        .setButtonText(t("settings.scheme.restore"))
-        .onClick(() => this.commit((next) => {
-          next.hiddenBuiltInSchemeIds = next.hiddenBuiltInSchemeIds.filter((hidden) => hidden !== id);
-        }, "none", true, true)));
-    }
-  }
-
-  private renderPlaceholderHelp(container: HTMLElement, t: Translate): void {
-    const details = container.createEl("details", { cls: "heading-numerals-placeholder-help" });
-    details.createEl("summary", { text: t("settings.scheme.placeholderHelp") });
-    const list = details.createEl("ul");
-    for (const format of NUMBER_FORMATS) {
-      list.createEl("li").append(
-        details.ownerDocument.createElement("code"),
-        details.ownerDocument.createTextNode(` — ${t(`format.${format}`)}`),
-      );
-      const code = list.lastElementChild?.querySelector("code");
-      if (code != null) code.textContent = `{1.${format}}`;
-    }
-  }
-
-  private renderBuiltInScheme(container: HTMLElement, id: typeof BUILT_IN_SCHEME_IDS[number], t: Translate): void {
-    const scheme = BUILT_IN_SCHEMES[id];
-    const details = container.createEl("details", { cls: "heading-numerals-scheme-card" });
-    details.createEl("summary", { text: `${builtInName(id, t)} · ${t("settings.scheme.builtin")}` });
-    this.renderReadOnlyTemplates(details, scheme.templates, t);
-    new Setting(details)
-      .addButton((button) => button.setButtonText(t("settings.scheme.copy")).onClick(() => {
-        this.commit((settings) => {
-          const copy: CustomNumberingScheme = {
-            id: newCustomId(settings),
-            name: `${builtInName(id, t)} ${t("settings.scheme.copySuffix")}`,
-            revision: 1,
-            baseLevel: scheme.baseLevel,
-            templates: [...scheme.templates],
-          };
-          settings.customSchemes.push(copy);
-          settings.selectedSchemeId = copy.id;
-        }, "display", true, true);
-      }))
-      .addButton((button) => button.setButtonText(t("settings.scheme.hide")).setWarning().onClick(() => {
-        this.commit((settings) => {
-          if (!settings.hiddenBuiltInSchemeIds.includes(id)) settings.hiddenBuiltInSchemeIds.push(id);
-          if (settings.selectedSchemeId === id) settings.selectedSchemeId = firstAvailableScheme(settings, id);
-        }, "display", true, true);
-      }));
-  }
-
-  private renderReadOnlyTemplates(container: HTMLElement, templates: readonly string[], t: Translate): void {
-    for (let index = 0; index < 6; index += 1) {
-      const template = templates[index] ?? "";
-      new Setting(container)
-        .setName(`H${index + 1}`)
-        .setDesc(template.length === 0
-          ? t("settings.scheme.disabled")
-          : t("settings.scheme.preview", { value: renderTemplate(template, PREVIEW_COUNTERS) }))
-        .addText((text) => text.setValue(template).setDisabled(true));
-    }
-  }
-
-  private renderCustomScheme(container: HTMLElement, scheme: CustomNumberingScheme, t: Translate): void {
-    const details = container.createEl("details", { cls: "heading-numerals-scheme-card" });
-    details.open = this.plugin.settings.selectedSchemeId === scheme.id;
-    const displayName = customSchemeName(scheme, t);
-    details.createEl("summary", { text: `${displayName} · ${t("settings.scheme.custom")}` });
-    const draft = { ...scheme, name: displayName, templates: [...scheme.templates] };
-    new Setting(details).setName(t("settings.scheme.name")).addText((text) => text
-      .setValue(draft.name)
-      .onChange((value) => { draft.name = value.slice(0, 80); }));
-    new Setting(details).setName(t("settings.scheme.base")).addDropdown((dropdown) => {
-      for (let level = 1; level <= 6; level += 1) dropdown.addOption(String(level), `H${level}`);
-      return dropdown.setValue(String(draft.baseLevel)).onChange((value) => {
-        draft.baseLevel = Number(value);
-      });
-    });
-    const validation = details.createDiv({ cls: "heading-numerals-template-validation" });
-    validation.setAttribute("role", "alert");
-    const previewElements: HTMLElement[] = [];
-    const updateValidation = (): boolean => {
-      const invalid = draft.templates.some((template) => compileTemplate(template).diagnostics.length > 0);
-      validation.hidden = !invalid;
-      validation.textContent = invalid ? t("settings.scheme.invalid") : "";
-      draft.templates.forEach((template, index) => {
-        const preview = previewElements[index];
-        if (preview != null) preview.textContent = template.length === 0
-          ? t("settings.scheme.disabled")
-          : t("settings.scheme.preview", { value: renderTemplate(template, PREVIEW_COUNTERS) });
-      });
-      return !invalid && draft.name.trim().length > 0;
-    };
-    for (let index = 0; index < 6; index += 1) {
-      const preview = details.createDiv({ cls: "heading-numerals-template-preview" });
-      previewElements.push(preview);
-      new Setting(details).setName(`H${index + 1}`).addText((text) => text
-        .setValue(draft.templates[index] ?? "")
-        .onChange((value) => {
-          draft.templates[index] = value.slice(0, 300);
-          updateValidation();
-        }));
-    }
-    updateValidation();
-    new Setting(details)
-      .addButton((button) => button.setButtonText(t("settings.scheme.save")).setCta().onClick(() => {
-        if (!updateValidation()) return;
-        this.commit((settings) => {
-          const current = settings.customSchemes.find((item) => item.id === scheme.id);
-          if (current == null) return;
-          const changed = current.name !== draft.name.trim()
-            || current.baseLevel !== draft.baseLevel
-            || current.templates.some((template, index) => template !== draft.templates[index]);
-          if (!changed) return;
-          archiveScheme(settings, current);
-          Object.assign(current, {
-            name: draft.name.trim(),
-            baseLevel: draft.baseLevel,
-            templates: [...draft.templates],
-            revision: current.revision + 1,
-          });
-        }, "display", true, true);
-      }))
-      .addButton((button) => button.setButtonText(t("settings.scheme.delete")).setWarning().onClick(() => {
-        this.commit((settings) => {
-          const current = settings.customSchemes.find((item) => item.id === scheme.id);
-          if (current != null) archiveScheme(settings, current);
-          settings.customSchemes = settings.customSchemes.filter((item) => item.id !== scheme.id);
-          if (settings.selectedSchemeId === scheme.id) {
-            settings.selectedSchemeId = firstAvailableScheme(settings, scheme.id);
-          }
-        }, "display", true, true);
-      }));
-  }
-
   private renderCleanup(container: HTMLElement, t: Translate): void {
     new Setting(container).setName(t("settings.write")).setHeading();
     new Setting(container)
       .setName(t("settings.markers"))
       .setDesc(t("settings.markers.desc"))
-      .addToggle((toggle) => toggle.setValue(this.plugin.settings.writeMarkers).onChange((value) => {
-        this.commit((settings) => { settings.writeMarkers = value; }, "none", true);
-      }));
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.writeMarkers)
+        .onChange((value) => this.updateControl("cleanup.writeMarkers", value)));
     new Setting(container)
       .setName(t("settings.cleanup"))
       .setDesc(t("settings.cleanup.desc"))
@@ -491,32 +281,14 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
         .addOption("templates", t("cleanup.templates"))
         .addOption("common", t("cleanup.common"))
         .setValue(this.plugin.settings.cleanupScope)
-        .onChange((value) => this.commit((settings) => {
-          settings.cleanupScope = value as HeadingNumeralsSettings["cleanupScope"];
-        }, "display", true)));
+        .onChange((value) => this.updateControl("cleanup.cleanupScope", value)));
     new Setting(container).setName(t("settings.multiple")).addToggle((toggle) => toggle
       .setValue(this.plugin.settings.removeMultiplePrefixes)
-      .onChange((value) => this.commit((settings) => { settings.removeMultiplePrefixes = value; }, "none", true)));
+      .onChange((value) => this.updateControl("cleanup.removeMultiplePrefixes", value)));
     new Setting(container).setName(t("settings.normalize")).addToggle((toggle) => toggle
       .setValue(this.plugin.settings.normalizeManualOnRenumber)
-      .onChange((value) => this.commit((settings) => { settings.normalizeManualOnRenumber = value; }, "none", true)));
-    this.renderCleanupHistory(container, t);
-  }
-
-  private renderCleanupHistory(container: HTMLElement, t: Translate): void {
-    new Setting(container).setName(t("settings.scheme.history")).setDesc(t("settings.scheme.history.desc")).setHeading();
-    if (this.plugin.settings.cleanupHistory.length === 0) {
-      container.createEl("p", { cls: "setting-item-description", text: t("settings.scheme.history.empty") });
-    } else {
-      for (const item of this.plugin.settings.cleanupHistory) {
-        new Setting(container).setName(`${item.schemeName} · v${item.revision}`)
-          .setDesc(item.templates.filter((template) => template.length > 0).join(" · "));
-      }
-      new Setting(container).addButton((button) => button
-        .setButtonText(t("settings.scheme.history.clear"))
-        .setWarning()
-        .onClick(() => this.commit((settings) => { settings.cleanupHistory = []; }, "display", true, true)));
-    }
+      .onChange((value) => this.updateControl("cleanup.normalizeManualOnRenumber", value)));
+    this.schemeRenderer(t).renderCleanupHistory(container);
   }
 
   private renderViews(container: HTMLElement, t: Translate): void {
@@ -524,9 +296,8 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const toggle = (name: Parameters<Translate>[0], key: "enableLivePreview" | "enableReadingView" | "enableSourceMode" | "revealOnActiveLine", description?: Parameters<Translate>[0]): void => {
       const setting = new Setting(container).setName(t(name));
       if (description != null) setting.setDesc(t(description));
-      setting.addToggle((component) => component.setValue(this.plugin.settings[key]).onChange((value) => {
-        this.commit((settings) => { settings[key] = value; }, "display", true);
-      }));
+      setting.addToggle((component) => component.setValue(this.plugin.settings[key])
+        .onChange((value) => this.updateControl(`views.${key}`, value)));
     };
     toggle("settings.live", "enableLivePreview");
     toggle("settings.reading", "enableReadingView");
@@ -535,22 +306,17 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     new Setting(container).setName(t("settings.appearance")).setHeading();
     new Setting(container).setName(t("settings.opacity")).addSlider((slider) => slider
       .setLimits(0.15, 1, 0.05).setDynamicTooltip().setValue(this.plugin.settings.virtualOpacity)
-      .onChange((value) => this.commit((settings) => { settings.virtualOpacity = value; }, "appearance")));
+      .onChange((value) => this.updateControl("views.virtualOpacity", value)));
     new Setting(container).setName(t("settings.gap")).addSlider((slider) => slider
       .setLimits(0, 2, 0.05).setDynamicTooltip().setValue(this.plugin.settings.virtualGapEm)
-      .onChange((value) => this.commit((settings) => { settings.virtualGapEm = value; }, "appearance")));
+      .onChange((value) => this.updateControl("views.virtualGapEm", value)));
     new Setting(container).setName(t("settings.batch")).setHeading();
     new Setting(container).setName(t("settings.excluded")).setDesc(t("settings.excluded.desc"))
-      .addText((text) => text.setValue(this.plugin.settings.excludedFolders.join(", ")).onChange((value) => {
-        this.commit((settings) => {
-          settings.excludedFolders = value.split(",")
-            .map((entry) => entry.trim().replace(/\\/gu, "/").replace(/^\/+|\/+$/gu, ""))
-            .filter((entry, index, all) => entry.length > 0 && all.indexOf(entry) === index);
-        }, "none");
-      }));
+      .addText((text) => text.setValue(this.plugin.settings.excludedFolders.join(", "))
+        .onChange((value) => this.updateControl("views.excludedFolders", value)));
     new Setting(container).setName(t("settings.backupLimit")).addSlider((slider) => slider
       .setLimits(1, 100, 1).setDynamicTooltip().setValue(this.plugin.settings.batchBackupLimitMb)
-      .onChange((value) => this.commit((settings) => { settings.batchBackupLimitMb = value; }, "none")));
+      .onChange((value) => this.updateControl("views.batchBackupLimitMb", value)));
   }
 }
 

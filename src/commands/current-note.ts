@@ -17,6 +17,10 @@ export function runCurrentNoteOperation(
     new Notice(translate("notice.noActiveNote"));
     return;
   }
+  if (view.getMode() !== "source") {
+    new Notice(translate("notice.editModeRequired"));
+    return;
+  }
   const source = view.editor.getValue();
   const result = createSourcePlan(source, operation, settings);
   if (result.status === "disabled") {

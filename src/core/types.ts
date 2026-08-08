@@ -1,6 +1,25 @@
-export const DISPLAY_MODES = ["normal", "show", "conceal"] as const;
+export const DISPLAY_MODES = ["normal", "show", "conceal", "show-conceal"] as const;
 export type DisplayMode = (typeof DISPLAY_MODES)[number];
 export type NoteDisplayMode = DisplayMode | "inherit" | "off";
+
+export interface DisplayPreferences {
+  showVirtualNumbers: boolean;
+  concealStoredNumbers: boolean;
+}
+
+export function displayModeToPreferences(mode: DisplayMode): DisplayPreferences {
+  return {
+    showVirtualNumbers: mode === "show" || mode === "show-conceal",
+    concealStoredNumbers: mode === "conceal" || mode === "show-conceal",
+  };
+}
+
+export function preferencesToDisplayMode(preferences: DisplayPreferences): DisplayMode {
+  if (preferences.showVirtualNumbers && preferences.concealStoredNumbers) return "show-conceal";
+  if (preferences.showVirtualNumbers) return "show";
+  if (preferences.concealStoredNumbers) return "conceal";
+  return "normal";
+}
 
 export const BUILT_IN_SCHEME_IDS = [
   "hierarchical",

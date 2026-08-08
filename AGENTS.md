@@ -6,6 +6,10 @@
 - Never broaden cleanup recognition without adding false-positive fixtures first.
 - Virtual and conceal display paths must never call Editor or Vault write APIs.
 - A green `npm run check` is not real Obsidian runtime acceptance; use `docs/ACCEPTANCE.md`.
-- Do not deploy to a production Vault unless the user explicitly names and authorizes that target.
-- Preserve plugin `data.json` during any scoped artifact deployment.
 - Use Conventional Commit subjects and normal Git identity; do not add agent attribution.
+
+## Deployment and host acceptance
+
+Deploy to a production Vault only when the user explicitly names and authorizes the exact target. Before copying, resolve the target plugin directory, record or back up the currently installed runtime assets, and hash `data.json` when present. Replace only the verified production assets declared by the release contract, preserve `data.json` unless the user explicitly authorizes a reset, and verify the installed hashes after copying.
+
+Acceptance fixtures, cleanup scripts, and destructive test operations may target only explicitly identified temporary Vaults; never point them at an ordinary or production Vault. Source checks, packaged-candidate checks, deployed-host behavior, emulator evidence, and physical-device evidence remain separate claims.

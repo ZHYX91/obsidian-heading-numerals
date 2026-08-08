@@ -1,10 +1,16 @@
 import type { HeadingNumeralsSettings } from "./settings";
-import { DISPLAY_MODES, type CleanupScope, type DisplayMode } from "../core/types";
+import {
+  DISPLAY_MODES,
+  displayModeToPreferences,
+  type CleanupScope,
+  type DisplayMode,
+} from "../core/types";
 import { isBuiltInSchemeId } from "../core/schemes";
 
 export interface NoteOverrides {
   disabled: boolean;
-  displayMode: DisplayMode | null;
+  showVirtualNumbers: boolean | null;
+  concealStoredNumbers: boolean | null;
   schemeId: string | null;
   cleanupScope: CleanupScope | null;
   starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>;
@@ -12,7 +18,8 @@ export interface NoteOverrides {
 
 export interface EffectiveNoteSettings {
   disabled: boolean;
-  displayMode: DisplayMode;
+  showVirtualNumbers: boolean;
+  concealStoredNumbers: boolean;
   schemeId: string;
   cleanupScope: CleanupScope;
   starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>;
@@ -20,7 +27,8 @@ export interface EffectiveNoteSettings {
 
 const EMPTY_OVERRIDES: NoteOverrides = {
   disabled: false,
-  displayMode: null,
+  showVirtualNumbers: null,
+  concealStoredNumbers: null,
   schemeId: null,
   cleanupScope: null,
   starts: {},
@@ -48,6 +56,15 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
   const displayMode = typeof modeValue === "string" && DISPLAY_MODES.includes(modeValue as DisplayMode)
     ? modeValue as DisplayMode
     : null;
+  const legacyDisplay = displayMode == null ? null : displayModeToPreferences(displayMode);
+  const showValue = data["heading-numerals-show-virtual"];
+  const concealValue = data["heading-numerals-conceal-stored"];
+  const showVirtualNumbers = typeof showValue === "boolean"
+    ? showValue
+    : legacyDisplay?.showVirtualNumbers ?? null;
+  const concealStoredNumbers = typeof concealValue === "boolean"
+    ? concealValue
+    : legacyDisplay?.concealStoredNumbers ?? null;
   const schemeValue = data["heading-numerals-scheme"];
   const schemeId = typeof schemeValue === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/u.test(schemeValue)
     ? schemeValue
@@ -69,7 +86,7 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
       }
     }
   }
-  return { disabled: ignore, displayMode, schemeId, cleanupScope, starts };
+  return { disabled: ignore, showVirtualNumbers, concealStoredNumbers, schemeId, cleanupScope, starts };
 }
 
 export function resolveNoteSettings(
@@ -83,7 +100,8 @@ export function resolveNoteSettings(
   );
   return {
     disabled: overrides.disabled,
-    displayMode: overrides.displayMode ?? settings.displayMode,
+    showVirtualNumbers: overrides.showVirtualNumbers ?? settings.showVirtualNumbers,
+    concealStoredNumbers: overrides.concealStoredNumbers ?? settings.concealStoredNumbers,
     schemeId: schemeExists && requestedScheme != null ? requestedScheme : settings.selectedSchemeId,
     cleanupScope: overrides.cleanupScope ?? settings.cleanupScope,
     starts: { ...overrides.starts },

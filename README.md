@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current release: `0.3.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
+> Current public release: `0.3.0`; the working tree targets `0.4.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
 
 ## 中文
 
@@ -20,6 +20,7 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 | 没有序号 | 只在界面看到序号 | 显示虚拟序号 | 否 |
 | 没有序号 | 把序号保存到文件 | 写入标题序号 | 是 |
 | 已有序号 | 保留文件但不在界面显示 | 隐藏已有序号 | 否 |
+| 已有序号 | 隐藏实体序号并显示统一的计算序号 | 同时启用显示与隐藏 | 否 |
 | 已有序号 | 从文件删除序号 | 清理标题序号 | 是 |
 
 显示与隐藏使用 CodeMirror 6 Decoration 和 Reading View 后处理器，不改文件内容；写入、清理和重新编号会先显示逐项预览。
@@ -30,7 +31,7 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 - 默认不删除 `3.14`、`2.0`、`2026`、日期、单位数量等有歧义的数字文本。
 - 写入命令不会静默覆盖人工序号；重新编号只会在预览后规范化高置信度人工序号。
 - 当前笔记的全部变更通过一次 Editor transaction 应用，可单步撤销。
-- 文件夹/全库处理必须预览；应用前重新校验每个文件，先保存可恢复快照，失败时回滚。
+- 文件夹/全库处理必须预览；通过原子条件替换重新校验每个文件，先保存可恢复快照，失败时只回滚仍保持插件写入结果的文件，不覆盖并发编辑。
 - 显示功能无网络请求、遥测或远程资源。
 - 不可见 U+2060 来源标记是实验选项，默认关闭；随时可以执行“移除来源标记”而保留可见序号。
 
@@ -58,7 +59,7 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 
 ### 命令
 
-- 切换为原样显示 / 显示虚拟标题序号 / 隐藏已有标题序号
+- 恢复原样显示 / 独立切换显示虚拟标题序号 / 独立切换隐藏已有标题序号
 - 向当前笔记写入标题序号
 - 清理当前笔记的标题序号
 - 重新编号当前笔记
@@ -71,7 +72,8 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 
 ```yaml
 ---
-heading-numerals: show
+heading-numerals-show-virtual: true
+heading-numerals-conceal-stored: true
 heading-numerals-scheme: hierarchical-h2
 heading-numerals-clean-scope: templates
 heading-numerals-start:
@@ -79,7 +81,7 @@ heading-numerals-start:
 ---
 ```
 
-`heading-numerals` 可设为 `inherit`、`normal`、`show`、`conceal` 或 `off`。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
+`heading-numerals-show-virtual` 与 `heading-numerals-conceal-stored` 可以分别设为 `true` 或 `false`。旧的 `heading-numerals` 仍兼容 `inherit`、`normal`、`show`、`conceal`、`show-conceal` 和 `off`。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
 
 ### 安装与开发
 
@@ -89,7 +91,7 @@ heading-numerals-start:
 2. 将 `dist/main.js`、`dist/manifest.json`、`dist/styles.css` 复制到测试 Vault 的 `.obsidian/plugins/heading-numerals/`。
 3. 在 Obsidian 设置中启用插件。
 
-要求：Obsidian 1.12.7 或更高版本，桌面端。移动端尚未完成真实验收，因此 manifest 明确设置为 desktop-only。
+要求：Obsidian 1.12.7 或更高版本。manifest 允许桌面端与移动端；Windows 与 Android 15 模拟器已有独立验收记录，Android 实体设备、macOS 和 Linux 仍需单独验收，不能由自动化或模拟器记录代替。
 
 ## English
 
@@ -99,9 +101,10 @@ heading-numerals-start:
 - Remove recognized stored numbers through an explainable preview.
 - Show virtual numbers in Live Preview and Reading View without changing the file.
 - Conceal stored numbers visually while preserving the source.
+- Enable virtual display and stored-number concealment together to replace recognized stored prefixes visually.
 - Renumber a note using the same engine as virtual display.
-- Process a folder or the whole vault with stale-content checks, a persisted recovery snapshot, and rollback.
-- Override view mode, scheme, cleanup confidence, and starting counters per note through Properties.
+- Process a folder or the whole vault with atomic stale-content guards, a persisted recovery snapshot, and conflict-safe rollback.
+- Override virtual display, stored-number concealment, scheme, cleanup scope, and starting counters per note through Properties.
 - Add, edit, and delete multiple custom schemes while retaining retired template revisions for cleanup.
 - Use English or Simplified Chinese UI text.
 
@@ -121,9 +124,9 @@ The default cleanup scope recognizes plugin markers plus all current and retired
 
 ### Compatibility and limitations
 
-- Requires Obsidian 1.12.7+ on desktop.
+- Requires Obsidian 1.12.7+ on desktop or mobile. Windows and an Android 15 emulator have dated records; physical Android devices, macOS, and Linux remain separate open acceptance targets.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.3.0.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.4.0.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.
@@ -136,7 +139,7 @@ npm ci
 npm run check
 ```
 
-`npm run check` verifies the pinned runtime, lint rules, strict TypeScript, unit tests, production bundle, manifest/version alignment, offline-only runtime contract, and the exact three-file release layout.
+`npm run check` verifies the pinned runtime, lint rules, strict TypeScript, full-source coverage thresholds, production bundle, manifest/version alignment, offline-only runtime contract, and the exact three-file release layout.
 
 Numeric `x.y.z` tags trigger the same pinned GitHub Actions release flow used by the sibling plugins: the full gate runs again, a deterministic manual-install ZIP is produced, public assets receive build-provenance attestations, and downloaded Release bytes are compared with the verified candidate. See [docs/RELEASING.md](docs/RELEASING.md).
 

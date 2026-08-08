@@ -16,7 +16,8 @@ describe("settings", () => {
       virtualOpacity: -2,
       excludedFolders: ["/Private/", "Private", 12],
     });
-    expect(settings.displayMode).toBe(DEFAULT_SETTINGS.displayMode);
+    expect(settings.showVirtualNumbers).toBe(DEFAULT_SETTINGS.showVirtualNumbers);
+    expect(settings.concealStoredNumbers).toBe(DEFAULT_SETTINGS.concealStoredNumbers);
     expect(settings.maxLevel).toBe(6);
     expect(settings.virtualOpacity).toBe(0.15);
     expect(settings.excludedFolders).toEqual(["Private"]);
@@ -32,7 +33,8 @@ describe("settings", () => {
     });
     expect(resolveNoteSettings(DEFAULT_SETTINGS, overrides)).toMatchObject({
       disabled: false,
-      displayMode: "conceal",
+      showVirtualNumbers: false,
+      concealStoredNumbers: true,
       schemeId: "legal",
       cleanupScope: "common",
       starts: { 2: 3 },
@@ -42,6 +44,47 @@ describe("settings", () => {
   it("treats off and ignore as a full opt-out", () => {
     expect(parseNoteOverrides({ "heading-numerals": "off" }).disabled).toBe(true);
     expect(parseNoteOverrides({ "heading-numerals-ignore": true }).disabled).toBe(true);
+  });
+
+  it("migrates legacy modes and supports independent persisted display preferences", () => {
+    expect(sanitizeSettings({ displayMode: "show" })).toMatchObject({
+      showVirtualNumbers: true,
+      concealStoredNumbers: false,
+    });
+    expect(sanitizeSettings({ displayMode: "conceal" })).toMatchObject({
+      showVirtualNumbers: false,
+      concealStoredNumbers: true,
+    });
+    expect(sanitizeSettings({
+      displayMode: "normal",
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+    })).toMatchObject({
+      schemaVersion: 3,
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+    });
+  });
+
+  it("accepts the combined legacy frontmatter mode and explicit per-feature overrides", () => {
+    expect(resolveNoteSettings(DEFAULT_SETTINGS, parseNoteOverrides({
+      "heading-numerals": "show-conceal",
+    }))).toMatchObject({
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+    });
+    expect(resolveNoteSettings({
+      ...DEFAULT_SETTINGS,
+      showVirtualNumbers: true,
+      concealStoredNumbers: false,
+    }, parseNoteOverrides({
+      "heading-numerals": "show",
+      "heading-numerals-show-virtual": false,
+      "heading-numerals-conceal-stored": true,
+    }))).toMatchObject({
+      showVirtualNumbers: false,
+      concealStoredNumbers: true,
+    });
   });
 
   it("migrates a 0.1 custom template without inventing one for untouched defaults", () => {
@@ -80,6 +123,19 @@ describe("settings", () => {
     const sources = cleanupTemplateSources(configured);
     expect(sources.some((source) => source.schemeId === "custom-guide" && source.revision === 2)).toBe(true);
     expect(sources.some((source) => source.schemeId === "custom-guide" && source.revision === 1)).toBe(true);
+  });
+
+  it("does not silently discard older cleanup templates", () => {
+    const cleanupHistory = Array.from({ length: 101 }, (_unused, index) => ({
+      schemeId: "custom-guide",
+      schemeName: "Guide",
+      revision: index + 1,
+      baseLevel: 1,
+      templates: [`Part ${index + 1} {1.arabic}`, "", "", "", "", ""],
+    }));
+    const configured = sanitizeSettings({ cleanupHistory });
+    expect(configured.cleanupHistory).toHaveLength(101);
+    expect(cleanupTemplateSources(configured).some((source) => source.revision === 1)).toBe(true);
   });
 
   it("never hides the selected built-in scheme during sanitization", () => {

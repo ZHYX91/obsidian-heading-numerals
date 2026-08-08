@@ -25,7 +25,24 @@ if (manifest.id !== "heading-numerals" || manifest.name !== "Heading Numerals") 
   throw new Error("Manifest identity changed unexpectedly.");
 }
 if (manifest.isDesktopOnly !== true) {
-  throw new Error("The initial release must remain desktop-only until mobile runtime acceptance is recorded.");
+  const acceptanceRecord = path.join(root, "docs", "acceptance", `${version}-android-api35.md`);
+  const requiredEvidence = [
+    `# ${version} Android API 35 acceptance record`,
+    "Status: accepted",
+    "Android: 15 / API 35",
+    "Chinese IME composition: passed",
+    "Write and cleanup round trip: passed",
+  ];
+  let record;
+  try {
+    record = await readFile(acceptanceRecord, "utf8");
+  } catch {
+    throw new Error(`Mobile support requires docs/acceptance/${version}-android-api35.md.`);
+  }
+  const missingEvidence = requiredEvidence.filter((evidence) => !record.includes(evidence));
+  if (missingEvidence.length > 0) {
+    throw new Error(`Current Android acceptance record is incomplete: ${missingEvidence.join(", ")}`);
+  }
 }
 
 const expectedFiles = ["main.js", "manifest.json", "styles.css"];

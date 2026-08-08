@@ -45,7 +45,11 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/app/settings-tab.ts", "src/ui/preview-modal.ts"],
+    files: [
+      "src/app/scheme-settings-renderer.ts",
+      "src/app/settings-tab.ts",
+      "src/ui/preview-modal.ts",
+    ],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
       "obsidianmd/prefer-create-el": "off",

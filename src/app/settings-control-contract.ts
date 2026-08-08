@@ -1,9 +1,10 @@
 import { cloneSettings, type HeadingNumeralsSettings } from "../config/settings";
-import type { SettingsImpact } from "./plugin";
+import type { SettingsImpact } from "./settings-impact";
 
 export type SettingsControlKey =
   | "general.language"
-  | "general.displayMode"
+  | "general.showVirtualNumbers"
+  | "general.concealStoredNumbers"
   | "general.maxLevel"
   | "general.missingLevelStrategy"
   | "cleanup.writeMarkers"
@@ -28,7 +29,8 @@ export interface SettingsControlMutation {
 
 const SETTINGS_CONTROL_KEYS = new Set<SettingsControlKey>([
   "general.language",
-  "general.displayMode",
+  "general.showVirtualNumbers",
+  "general.concealStoredNumbers",
   "general.maxLevel",
   "general.missingLevelStrategy",
   "cleanup.writeMarkers",
@@ -55,7 +57,8 @@ export function getSettingsControlValue(
 ): unknown {
   switch (key) {
     case "general.language": return settings.language;
-    case "general.displayMode": return settings.displayMode;
+    case "general.showVirtualNumbers": return settings.showVirtualNumbers;
+    case "general.concealStoredNumbers": return settings.concealStoredNumbers;
     case "general.maxLevel": return settings.maxLevel;
     case "general.missingLevelStrategy": return settings.missingLevelStrategy;
     case "cleanup.writeMarkers": return settings.writeMarkers;
@@ -88,9 +91,12 @@ export function applySettingsControlValue(
       next.language = value;
       refreshSurface = true;
       break;
-    case "general.displayMode":
-      if (value !== "normal" && value !== "show" && value !== "conceal") throw invalidControlValue(key);
-      next.displayMode = value;
+    case "general.showVirtualNumbers":
+      next.showVirtualNumbers = controlBoolean(key, value);
+      impact = "display";
+      break;
+    case "general.concealStoredNumbers":
+      next.concealStoredNumbers = controlBoolean(key, value);
       impact = "display";
       break;
     case "general.maxLevel":

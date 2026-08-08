@@ -72,7 +72,9 @@ export class ChangePreviewModal extends Modal {
       }
     }
     if (renderedChanges < changes) {
-      contentEl.createEl("p", { text: `… ${changes - renderedChanges} more changes` });
+      contentEl.createEl("p", {
+        text: t("preview.moreChanges", { count: changes - renderedChanges }),
+      });
     }
 
     const warningEntries = this.options.documents.flatMap((document) => (

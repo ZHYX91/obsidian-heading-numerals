@@ -2,6 +2,27 @@
 
 All notable changes will be documented in this file.
 
+## 0.4.0 - Unreleased
+
+### Added
+
+- Independent virtual-number and stored-number concealment controls, including the combined display state.
+- Android 15 emulator evidence, mobile CodeMirror syntax coverage, and Chinese IME composition acceptance.
+- Guarded replacement tests for batch writes and rollback conflicts.
+
+### Changed
+
+- The ribbon menu now presents two independent checkable display effects and a conditional restore-source action.
+- Built-in scheme cards use compact one-column template previews, and legacy custom schemes have explicit explanations.
+- Retired custom templates remain available for cleanup until the user explicitly clears the history.
+- Reading View caches compare exact source text and always remove stale plugin decorations before reevaluating a section.
+
+### Fixed
+
+- Batch writes and rollbacks no longer overwrite content that changed after the previewed replacement.
+- Interrupted recovery promotion prefers the newer pending snapshot and falls back safely when it is invalid.
+- Preview truncation text now follows the selected interface language.
+
 ## 0.3.0 - 2026-08-08
 
 ### Added

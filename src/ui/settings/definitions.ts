@@ -64,12 +64,17 @@ function generalDefinitions(
       { auto: t("language.auto"), en: t("language.en"), zh: t("language.zh") },
       DEFAULT_SETTINGS.language,
     ),
-    dropdownDefinition(
-      "general.displayMode",
-      t("settings.mode"),
-      t("settings.mode.desc"),
-      { normal: t("mode.normal"), show: t("mode.show"), conceal: t("mode.conceal") },
-      DEFAULT_SETTINGS.displayMode,
+    toggleDefinition(
+      "general.showVirtualNumbers",
+      t("settings.showVirtual"),
+      t("settings.showVirtual.desc"),
+      DEFAULT_SETTINGS.showVirtualNumbers,
+    ),
+    toggleDefinition(
+      "general.concealStoredNumbers",
+      t("settings.concealStored"),
+      t("settings.concealStored.desc"),
+      DEFAULT_SETTINGS.concealStoredNumbers,
     ),
     {
       name: t("settings.maxLevel"),

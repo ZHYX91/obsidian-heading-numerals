@@ -66,6 +66,19 @@ export function isBuiltInSchemeId(value: string): value is BuiltInSchemeId {
   return BUILT_IN_SCHEME_IDS.includes(value as BuiltInSchemeId);
 }
 
+export function findMatchingBuiltInSchemeId(
+  scheme: Pick<NumberingScheme, "baseLevel" | "templates">,
+): BuiltInSchemeId | null {
+  for (const id of BUILT_IN_SCHEME_IDS) {
+    const builtIn = BUILT_IN_SCHEMES[id];
+    if (scheme.baseLevel !== builtIn.baseLevel) continue;
+    if (builtIn.templates.every((template, index) => template === (scheme.templates[index] ?? ""))) {
+      return id;
+    }
+  }
+  return null;
+}
+
 export function resolveScheme(
   id: string,
   customSchemes: readonly CustomNumberingScheme[],

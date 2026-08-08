@@ -5,7 +5,7 @@ import {
   type CleanupTemplateHistory,
   type CleanupTemplateSource,
   type CustomNumberingScheme,
-  type DisplayMode,
+  displayModeToPreferences,
   type MissingLevelStrategy,
   type NumberingOptions,
   type SchemeId,
@@ -14,9 +14,10 @@ import { compileTemplate } from "../core/template-compiler";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
 export interface HeadingNumeralsSettings {
-  schemaVersion: 2;
+  schemaVersion: 3;
   language: "auto" | "en" | "zh";
-  displayMode: DisplayMode;
+  showVirtualNumbers: boolean;
+  concealStoredNumbers: boolean;
   selectedSchemeId: string;
   customSchemes: CustomNumberingScheme[];
   hiddenBuiltInSchemeIds: string[];
@@ -69,9 +70,10 @@ export const DEFAULT_CUSTOM_TEMPLATES = [
 ];
 
 export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   language: "auto",
-  displayMode: "normal",
+  showVirtualNumbers: false,
+  concealStoredNumbers: false,
   selectedSchemeId: "hierarchical-h2",
   customSchemes: [],
   hiddenBuiltInSchemeIds: [],
@@ -168,11 +170,13 @@ function sanitizeCleanupHistory(value: unknown): CleanupTemplateHistory[] {
       templates: nextTemplates,
     });
   }
-  return output.slice(-100);
+  return output;
 }
 
 export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
   const raw = isRecord(value) ? value : {};
+  const legacyDisplayMode = oneOf(raw.displayMode, DISPLAY_MODES, "normal");
+  const legacyDisplay = displayModeToPreferences(legacyDisplayMode);
   const customSchemes = sanitizeCustomSchemes(raw.customSchemes);
   const legacyTemplates = templates(raw.customTemplates, DEFAULT_CUSTOM_TEMPLATES);
   const legacyUsesCustom = raw.scheme === "custom";
@@ -206,9 +210,10 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
     : [];
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     language: oneOf(raw.language, ["auto", "en", "zh"] as const, DEFAULT_SETTINGS.language),
-    displayMode: oneOf(raw.displayMode, DISPLAY_MODES, DEFAULT_SETTINGS.displayMode),
+    showVirtualNumbers: booleanOr(raw.showVirtualNumbers, legacyDisplay.showVirtualNumbers),
+    concealStoredNumbers: booleanOr(raw.concealStoredNumbers, legacyDisplay.concealStoredNumbers),
     selectedSchemeId,
     customSchemes,
     hiddenBuiltInSchemeIds,

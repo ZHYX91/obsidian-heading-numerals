@@ -14,7 +14,8 @@ const numbering: NumberingOptions = {
 
 function options(overrides: Partial<DisplayPlanOptions>): DisplayPlanOptions {
   return {
-    mode: "show",
+    showVirtualNumbers: true,
+    concealStoredNumbers: false,
     numbering,
     cleanupScope: "templates",
     templateSources: [{
@@ -43,7 +44,8 @@ describe("display plan", () => {
   it("conceals high-confidence prefixes", () => {
     const source = "# 1.1 Stored\n# 1. Medium\n# 3.14 Pi";
     const plan = createDisplayPlan(parseAtxHeadings(source), options({
-      mode: "conceal",
+      showVirtualNumbers: false,
+      concealStoredNumbers: true,
       cleanupScope: "common",
     }));
     expect(plan).toHaveLength(1);
@@ -52,7 +54,10 @@ describe("display plan", () => {
 
   it("conceals expected unmarked single-level numbers", () => {
     const source = "# 1 First\n# 2 Second";
-    const plan = createDisplayPlan(parseAtxHeadings(source), options({ mode: "conceal" }));
+    const plan = createDisplayPlan(parseAtxHeadings(source), options({
+      showVirtualNumbers: false,
+      concealStoredNumbers: true,
+    }));
     expect(plan.map((item) => source.slice(item.from, item.to))).toEqual(["1 ", "2 "]);
   });
 
@@ -60,9 +65,40 @@ describe("display plan", () => {
     const source = "# 1.1 Stored";
     const heading = parseAtxHeadings(source)[0];
     expect(createDisplayPlan([heading!], options({
-      mode: "conceal",
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
       selections: [{ from: heading!.lineFrom, to: heading!.lineFrom }],
     }))).toEqual([]);
-    expect(createDisplayPlan([heading!], options({ mode: "conceal", composing: true }))).toEqual([]);
+    expect(createDisplayPlan([heading!], options({
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+      composing: true,
+    }))).toEqual([]);
+  });
+
+  it("conceals a recognized stored prefix and replaces it with one virtual number", () => {
+    const source = "# 1 Stored\n# Next";
+    const plan = createDisplayPlan(parseAtxHeadings(source), options({
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+    }));
+    expect(plan.map((item) => ({
+      kind: item.kind,
+      line: item.line,
+      source: source.slice(item.from, item.to),
+      label: item.label,
+    }))).toEqual([
+      { kind: "conceal", line: 0, source: "1 ", label: "" },
+      { kind: "virtual", line: 0, source: "", label: "1" },
+      { kind: "virtual", line: 1, source: "", label: "2" },
+    ]);
+  });
+
+  it("fails closed for suspicious prefixes when both display features are enabled", () => {
+    const source = "# 3.14 Pi";
+    expect(createDisplayPlan(parseAtxHeadings(source), options({
+      showVirtualNumbers: true,
+      concealStoredNumbers: true,
+    }))).toEqual([]);
   });
 });

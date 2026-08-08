@@ -4,7 +4,6 @@ import { analyzeHeadingPrefix } from "../core/prefix-analysis";
 import type {
   CleanupScope,
   CleanupTemplateSource,
-  DisplayMode,
   NumberingOptions,
   ParsedHeading,
 } from "../core/types";
@@ -23,7 +22,8 @@ export interface DisplayDecorationPlan {
 }
 
 export interface DisplayPlanOptions {
-  mode: DisplayMode;
+  showVirtualNumbers: boolean;
+  concealStoredNumbers: boolean;
   numbering: NumberingOptions;
   cleanupScope: CleanupScope;
   templateSources: readonly CleanupTemplateSource[];
@@ -48,7 +48,7 @@ export function createDisplayPlan(
   headings: readonly ParsedHeading[],
   options: DisplayPlanOptions,
 ): DisplayDecorationPlan[] {
-  if (options.mode === "normal" || options.composing) {
+  if ((!options.showVirtualNumbers && !options.concealStoredNumbers) || options.composing) {
     return [];
   }
   const numbered = numberHeadings(headings, options.numbering);
@@ -60,34 +60,26 @@ export function createDisplayPlan(
     }
     const analysis = analyzeHeadingPrefix(heading, item.label, options.templateSources);
     const { matches, expectedUnmarked } = analysis;
-    if (options.mode === "show") {
-      if (matches.length === 0 && !analysis.suspicious) {
-        decorations.push({
-          kind: "virtual",
-          from: heading.contentFrom,
-          to: heading.contentFrom,
-          label: item.label,
-          line: heading.line,
-        });
-      }
-      continue;
-    }
+    const revealStored = options.concealStoredNumbers
+      && options.revealOnActiveLine
+      && selectionTouchesHeading(heading, options.selections);
     if (
-      options.revealOnActiveLine
-      && selectionTouchesHeading(heading, options.selections)
+      revealStored
     ) {
       continue;
     }
     let concealTo = 0;
-    for (const match of matches) {
-      if (
-        match.from !== concealTo
-        || (!meetsCleanupScope(match, options.cleanupScope)
-          && !(concealTo === 0 && expectedUnmarked))
-      ) {
-        break;
+    if (options.concealStoredNumbers) {
+      for (const match of matches) {
+        if (
+          match.from !== concealTo
+          || (!meetsCleanupScope(match, options.cleanupScope)
+            && !(concealTo === 0 && expectedUnmarked))
+        ) {
+          break;
+        }
+        concealTo = match.to;
       }
-      concealTo = match.to;
     }
     if (concealTo > 0) {
       decorations.push({
@@ -95,6 +87,19 @@ export function createDisplayPlan(
         from: heading.contentFrom,
         to: heading.contentFrom + concealTo,
         label: "",
+        line: heading.line,
+      });
+    }
+    if (
+      options.showVirtualNumbers
+      && (concealTo > 0 || (matches.length === 0 && !analysis.suspicious))
+    ) {
+      const virtualFrom = heading.contentFrom + concealTo;
+      decorations.push({
+        kind: "virtual",
+        from: virtualFrom,
+        to: virtualFrom,
+        label: item.label,
         line: heading.line,
       });
     }

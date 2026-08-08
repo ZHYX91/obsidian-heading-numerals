@@ -56,12 +56,24 @@ function syntaxConfirmsHeading(state: EditorState, heading: ParsedHeading): bool
     1,
   );
   for (let depth = 0; node != null && depth < 8; depth += 1) {
-    if (/^(?:ATXHeading[1-6]?|HeaderMark|HyperMD-header(?:_H[1-6])?)$/u.test(node.name)) {
+    if (syntaxNodeConfirmsHeading(node.name, heading.level)) {
       return true;
     }
     node = node.parent;
   }
   return false;
+}
+
+export function syntaxNodeConfirmsHeading(nodeName: string, level: number): boolean {
+  if (nodeName === "ATXHeading" || nodeName === "HeaderMark" || nodeName === "HyperMD-header") {
+    return true;
+  }
+  if (nodeName === `ATXHeading${level}` || nodeName === `HyperMD-header_H${level}`) {
+    return true;
+  }
+  // Obsidian mobile 1.12 uses duplicated CSS-style node names such as
+  // `HyperMD-header_HyperMD-header-2`, while newer desktop builds use `_H2`.
+  return nodeName === `HyperMD-header_HyperMD-header-${level}`;
 }
 
 function parseOverrides(source: string): NoteOverrides | null {
@@ -142,7 +154,8 @@ export class HeadingDisplayController {
           to: range.to,
         }));
         const plan = createDisplayPlan(headings, {
-          mode: effective.displayMode,
+          showVirtualNumbers: effective.showVirtualNumbers,
+          concealStoredNumbers: effective.concealStoredNumbers,
           numbering: toNumberingOptions(settings, {
             schemeId: effective.schemeId,
             starts: effective.starts,

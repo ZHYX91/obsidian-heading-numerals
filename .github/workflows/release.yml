@@ -13,13 +13,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 25
     permissions:
-      attestations: write
-      contents: write
-      id-token: write
+      contents: read
+    outputs:
+      artifact_digest: ${{ steps.record_handoff.outputs.artifact_digest }}
+      artifact_id: ${{ steps.record_handoff.outputs.artifact_id }}
+      artifact_name: ${{ steps.record_handoff.outputs.artifact_name }}
     steps:
       - name: Check out tagged source without persistent credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -57,15 +59,84 @@ jobs:
       - name: Build deterministic release handoff
         run: node scripts/release-assets.mjs handoff "$GITHUB_REF_NAME" "$RUNNER_TEMP/release"
 
-      - name: Upload verified handoff
+      - name: Upload exact verified handoff
+        id: upload_candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           compression-level: 0
           if-no-files-found: error
+          include-hidden-files: false
           name: heading-numerals-release-${{ github.run_id }}-${{ github.run_attempt }}
           overwrite: false
           path: ${{ runner.temp }}/release
           retention-days: 7
+
+      - name: Record exact server handoff identity
+        id: record_handoff
+        shell: bash
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload_candidate.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ steps.upload_candidate.outputs.artifact-id }}
+          ARTIFACT_NAME: heading-numerals-release-${{ github.run_id }}-${{ github.run_attempt }}
+          ARTIFACT_URL: ${{ steps.upload_candidate.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$ARTIFACT_URL" == "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts/${ARTIFACT_ID}" ]]
+          echo "artifact_digest=$ARTIFACT_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      attestations: write
+      contents: write
+      id-token: write
+    env:
+      EXPECTED_ARTIFACT_DIGEST: ${{ needs.verify.outputs.artifact_digest }}
+      EXPECTED_ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}
+      EXPECTED_ARTIFACT_NAME: ${{ needs.verify.outputs.artifact_name }}
+    steps:
+      - name: Download and verify exact release candidate handoff
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_ARTIFACT_NAME" == "heading-numerals-release-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" ]]
+          [[ "$EXPECTED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$EXPECTED_ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]
+          artifact_json="$RUNNER_TEMP/artifact.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$EXPECTED_ARTIFACT_ID" > "$artifact_json"
+          jq --exit-status \
+            --arg digest "sha256:$EXPECTED_ARTIFACT_DIGEST" \
+            --arg name "$EXPECTED_ARTIFACT_NAME" \
+            --arg sha "$GITHUB_SHA" \
+            --argjson artifact_id "$EXPECTED_ARTIFACT_ID" \
+            --argjson run_id "$GITHUB_RUN_ID" '
+              .id == $artifact_id and .name == $name and .expired == false and
+              .digest == $digest and .workflow_run.id == $run_id and .workflow_run.head_sha == $sha
+            ' "$artifact_json" >/dev/null
+          transport_zip="$RUNNER_TEMP/release-handoff.zip"
+          curl --fail --location --silent --show-error \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2026-03-10' \
+            "$(jq --raw-output '.archive_download_url' "$artifact_json")" \
+            --output "$transport_zip"
+          test "$(sha256sum "$transport_zip" | cut -d' ' -f1)" = "$EXPECTED_ARTIFACT_DIGEST"
+          expected_names="$(printf '%s\n' SHA256SUMS "heading-numerals-$GITHUB_REF_NAME.zip" main.js manifest.json styles.css | LC_ALL=C sort)"
+          actual_names="$(unzip -Z1 "$transport_zip" | LC_ALL=C sort)"
+          test "$actual_names" = "$expected_names"
+          mkdir "$RUNNER_TEMP/release"
+          unzip -qq "$transport_zip" -d "$RUNNER_TEMP/release"
+          (cd "$RUNNER_TEMP/release" && sha256sum --check SHA256SUMS)
+          test "$(jq --raw-output '.version' "$RUNNER_TEMP/release/manifest.json")" = "$GITHUB_REF_NAME"
 
       - name: Attest public release assets
         uses: actions/attest@36051bcae73b7c2a8a6945a48cbf80953c6baa35 # v4

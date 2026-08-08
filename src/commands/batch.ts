@@ -7,6 +7,7 @@ import type {
 } from "../config/settings";
 import type { TransformOperation } from "../core/types";
 import { digestText } from "../core/text-digest";
+import { replaceExactly, rollbackExactly } from "../application/conditional-replace";
 import { BatchOperationModal, FolderScopeModal, type BatchScope } from "../ui/batch-modals";
 import { ChangePreviewModal, type PreviewDocument } from "../ui/preview-modal";
 import { createSourcePlan } from "./transform-options";
@@ -71,24 +72,25 @@ export class BatchController {
       }
       preflight.push({ file, current, before: item.before });
     }
-    const restored: Array<{ file: TFile; after: string }> = [];
+    const restored: Array<{ file: TFile; before: string; after: string }> = [];
     try {
       for (const item of preflight) {
         if (item.current !== item.before) {
-          await this.app.vault.modify(item.file, item.before);
-          restored.push({ file: item.file, after: item.current });
+          await replaceExactly(this.app.vault, item.file, item.current, item.before);
+          restored.push({ file: item.file, before: item.before, after: item.current });
         }
       }
       await this.persistence.setLastBatch(null);
       new Notice(translate("notice.undoDone", { count: restored.length }));
     } catch (error) {
       console.error("Heading Numerals batch restore failed", error);
-      for (const item of restored.reverse()) {
-        try {
-          await this.app.vault.modify(item.file, item.after);
-        } catch (rollbackError) {
-          console.error("Heading Numerals restore rollback failed", rollbackError);
-        }
+      const rollbackFailures = await rollbackExactly(this.app.vault, restored.map((item) => ({
+        target: item.file,
+        before: item.after,
+        after: item.before,
+      })));
+      for (const rollbackError of rollbackFailures) {
+        console.error("Heading Numerals restore rollback failed", rollbackError);
       }
       new Notice(translate("notice.batchFailed"));
     }
@@ -180,32 +182,27 @@ export class BatchController {
       new Notice(translate("notice.batchTooLarge", { limit }));
       return;
     }
-    const modified: Array<{ file: TFile; before: string }> = [];
+    const modified: Array<{ file: TFile; before: string; after: string }> = [];
     try {
       await this.persistence.setLastBatch(snapshot);
       for (const item of files) {
-        const current = await this.app.vault.cachedRead(item.file);
-        if (current !== item.before) {
-          throw new Error(`File changed before batch write: ${item.file.path}`);
-        }
-        await this.app.vault.modify(item.file, item.after);
-        modified.push({ file: item.file, before: item.before });
+        await replaceExactly(this.app.vault, item.file, item.before, item.after);
+        modified.push(item);
       }
       snapshot.status = "applied";
       await this.persistence.setLastBatch(snapshot);
       new Notice(translate("notice.batchApplied", { count: modified.length }));
     } catch (error) {
       console.error("Heading Numerals batch failed", error);
-      let rollbackComplete = true;
-      for (const item of modified.reverse()) {
-        try {
-          await this.app.vault.modify(item.file, item.before);
-        } catch (rollbackError) {
-          rollbackComplete = false;
-          console.error("Heading Numerals batch rollback failed", rollbackError);
-        }
+      const rollbackFailures = await rollbackExactly(this.app.vault, modified.map((item) => ({
+        target: item.file,
+        before: item.before,
+        after: item.after,
+      })));
+      for (const rollbackError of rollbackFailures) {
+        console.error("Heading Numerals batch rollback failed", rollbackError);
       }
-      if (rollbackComplete) {
+      if (rollbackFailures.length === 0) {
         try {
           await this.persistence.setLastBatch(null);
         } catch (persistenceError) {
