@@ -170,18 +170,14 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
   }
 
   private renderSaveStatus(container: HTMLElement, t: Translate, hideContainer = false): () => void {
-    const row = container.ownerDocument.createElement("div");
-    row.className = "heading-numerals-settings-save-status";
-    const message = row.ownerDocument.createElement("span");
-    const retry = row.ownerDocument.createElement("button");
+    const row = container.createDiv({ cls: "heading-numerals-settings-save-status" });
+    const message = row.createSpan();
+    const retry = row.createEl("button", { text: t("settings.save.retry") });
     retry.type = "button";
-    retry.textContent = t("settings.save.retry");
     retry.addEventListener("click", () => {
       retry.disabled = true;
       void this.plugin.retrySettingsSave().catch(() => undefined);
     });
-    row.append(message, retry);
-    container.append(row);
     const update = (status: SettingsSaveStatus): void => {
       row.hidden = status.state === "saved";
       if (hideContainer) container.hidden = status.state === "saved";

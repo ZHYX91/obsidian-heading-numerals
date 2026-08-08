@@ -10,12 +10,14 @@ interface TimerHost {
   clearTimeout(handle: ReturnType<typeof setTimeout>): void;
 }
 
-const defaultTimerHost: TimerHost = typeof window === "undefined"
-  ? {
-    setTimeout: (handler, delay) => setTimeout(handler, delay),
-    clearTimeout: (handle) => clearTimeout(handle),
-  }
-  : window;
+const unavailableTimerHost: TimerHost = {
+  setTimeout: () => {
+    throw new Error("Heading Numerals settings saves require a browser window.");
+  },
+  clearTimeout: () => undefined,
+};
+
+const defaultTimerHost: TimerHost = typeof window === "undefined" ? unavailableTimerHost : window;
 
 export class SettingsSaveCoordinator<T> {
   private readonly listeners = new Set<(status: SettingsSaveStatus) => void>();

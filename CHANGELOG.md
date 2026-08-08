@@ -2,6 +2,19 @@
 
 All notable changes will be documented in this file.
 
+## 0.4.1 - 2026-08-09
+
+### Changed
+
+- Adopted Obsidian DOM helpers in the settings surfaces where they preserve the host document.
+- Marked the change-preview modal directly instead of relying on the CSS `:has()` selector.
+- Updated installation text now that Heading Numerals is available in Community Plugins.
+
+### Fixed
+
+- Non-browser settings saves now fail explicitly instead of depending on ambient global timers.
+- The fallback tab styling no longer requires an unnecessary `!important` override.
+
 ## 0.4.0 - 2026-08-09
 
 ### Added

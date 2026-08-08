@@ -1,21 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { SettingsSaveCoordinator } from "../../src/config/settings-save-coordinator";
 
 describe("SettingsSaveCoordinator", () => {
   it("coalesces scheduled writes to the newest snapshot", async () => {
-    vi.useFakeTimers();
     const persisted: number[] = [];
+    let scheduled: (() => void) | null = null;
+    const timers = {
+      setTimeout: (handler: () => void): ReturnType<typeof setTimeout> => {
+        scheduled = handler;
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      },
+      clearTimeout: (): void => {
+        scheduled = null;
+      },
+    };
     const coordinator = new SettingsSaveCoordinator<number>(async (value) => {
       persisted.push(value);
-    }, 50);
+    }, 50, timers);
     coordinator.schedule(1);
     coordinator.schedule(2);
     expect(coordinator.snapshot().state).toBe("scheduled");
-    await vi.advanceTimersByTimeAsync(50);
+    const runScheduled = scheduled as (() => void) | null;
+    runScheduled?.();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(persisted).toEqual([2]);
     expect(coordinator.snapshot().state).toBe("saved");
-    vi.useRealTimers();
   });
 
   it("retains failed data and exposes an explicit retry path", async () => {

@@ -31,6 +31,7 @@ export class ChangePreviewModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this;
     const t = this.options.translate;
+    this.modalEl.addClass("heading-numerals-preview-modal");
     titleEl.setText(t(`preview.title.${this.options.operation}`));
     contentEl.addClass("heading-numerals-preview");
     const changes = this.options.documents.reduce((sum, document) => sum + document.plan.changes.length, 0);
@@ -117,6 +118,7 @@ export class ChangePreviewModal extends Modal {
   }
 
   override onClose(): void {
+    this.modalEl.removeClass("heading-numerals-preview-modal");
     this.contentEl.empty();
   }
 }

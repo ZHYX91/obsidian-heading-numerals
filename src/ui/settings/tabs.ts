@@ -13,14 +13,13 @@ export function createSettingsTabs(
   onSelect: (id: SettingsTabId) => void,
 ): { panel: HTMLElement; cleanup: () => void } {
   const document = container.ownerDocument;
-  const list = document.createElement("div");
-  list.className = "heading-numerals-settings-tabs";
+  const list = container.createDiv({ cls: "heading-numerals-settings-tabs" });
   list.setAttribute("role", "tablist");
   list.setAttribute("aria-label", ariaLabel);
   list.setAttribute("aria-orientation", "horizontal");
   const listeners: Array<() => void> = [];
   const buttons = definitions.map((definition, index) => {
-    const button = document.createElement("button");
+    const button = list.createEl("button");
     const active = definition.id === activeId;
     button.type = "button";
     button.className = `heading-numerals-settings-tab${active ? " is-active" : ""}`;
@@ -48,17 +47,13 @@ export function createSettingsTabs(
       button.removeEventListener("click", click);
       button.removeEventListener("keydown", keydown);
     });
-    list.append(button);
     return button;
   });
-  container.append(list);
-  const panel = document.createElement("div");
-  panel.className = "heading-numerals-settings-panel";
+  const panel = container.createDiv({ cls: "heading-numerals-settings-panel" });
   panel.id = `heading-numerals-settings-panel-${activeId}`;
   panel.setAttribute("role", "tabpanel");
   panel.setAttribute("aria-labelledby", `heading-numerals-settings-tab-${activeId}`);
   panel.tabIndex = 0;
-  container.append(panel);
   const activeButton = buttons.find((button) => button.classList.contains("is-active"));
   document.defaultView?.requestAnimationFrame(() => (
     activeButton?.scrollIntoView({ block: "nearest", inline: "nearest" })

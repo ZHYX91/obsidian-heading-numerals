@@ -7,6 +7,23 @@ import { createSettingsTabs } from "../../src/ui/settings/tabs";
 describe("settings tabs", () => {
   it("uses an accessible tablist and supports keyboard navigation", () => {
     const container = document.createElement("div");
+    const installHelpers = (element: HTMLElement): void => {
+      element.createDiv = (options?: string | DomElementInfo): HTMLDivElement => {
+        const child = document.createElement("div");
+        installHelpers(child);
+        if (typeof options === "string") child.className = options;
+        else if (options?.cls != null) child.className = Array.isArray(options.cls) ? options.cls.join(" ") : options.cls;
+        element.append(child);
+        return child;
+      };
+      element.createEl = (<K extends keyof HTMLElementTagNameMap>(tag: K): HTMLElementTagNameMap[K] => {
+        const child = document.createElement(tag);
+        installHelpers(child);
+        element.append(child);
+        return child;
+      }) as HTMLElement["createEl"];
+    };
+    installHelpers(container);
     document.body.append(container);
     const select = vi.fn();
     const result = createSettingsTabs(container, [

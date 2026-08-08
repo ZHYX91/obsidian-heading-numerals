@@ -63,7 +63,7 @@
   border-bottom: 2px solid transparent;
   border-radius: 5px 5px 0 0;
   box-sizing: border-box;
-  box-shadow: none !important;
+  box-shadow: none;
   color: var(--text-muted);
   cursor: pointer;
   flex: 0 0 auto;
@@ -280,7 +280,7 @@
   margin-block: var(--size-4-2);
 }
 
-.modal:has(.heading-numerals-preview) {
+.heading-numerals-preview-modal {
   width: min(920px, 92vw);
 }
 

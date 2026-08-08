@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current release: `0.4.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is awaiting its initial Obsidian Community Plugins review.
+> Current release: `0.4.1`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
 
 ## 中文
 
@@ -85,7 +85,7 @@ heading-numerals-start:
 
 ### 安装与开发
 
-当前版本正在申请加入 Obsidian Community Plugins。审核完成前，可以从 GitHub Release 手动安装，或开发安装：
+可在 Obsidian 的“第三方插件”中搜索 Heading Numerals 并安装。也可以从 GitHub Release 手动安装，或进行开发安装：
 
 1. 运行 `npm ci && npm run build`。
 2. 将 `dist/main.js`、`dist/manifest.json`、`dist/styles.css` 复制到测试 Vault 的 `.obsidian/plugins/heading-numerals/`。
@@ -126,7 +126,7 @@ The default cleanup scope recognizes plugin markers plus all current and retired
 
 - Requires Obsidian 1.12.7+ on desktop or mobile. Windows and an Android 15 emulator have dated records; physical Android devices, macOS, and Linux remain separate open acceptance targets.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.4.0.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.4.1.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.
