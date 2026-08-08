@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current public release: `0.3.0`; the working tree targets `0.4.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
+> Current release: `0.4.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is awaiting its initial Obsidian Community Plugins review.
 
 ## 中文
 
@@ -85,7 +85,7 @@ heading-numerals-start:
 
 ### 安装与开发
 
-当前版本尚未加入 Obsidian Community Plugins。可以从 GitHub Release 手动安装，或开发安装：
+当前版本正在申请加入 Obsidian Community Plugins。审核完成前，可以从 GitHub Release 手动安装，或开发安装：
 
 1. 运行 `npm ci && npm run build`。
 2. 将 `dist/main.js`、`dist/manifest.json`、`dist/styles.css` 复制到测试 Vault 的 `.obsidian/plugins/heading-numerals/`。
