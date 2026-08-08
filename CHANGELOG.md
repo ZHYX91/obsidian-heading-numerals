@@ -2,6 +2,26 @@
 
 All notable changes will be documented in this file.
 
+## 0.3.0 - 2026-08-08
+
+### Added
+
+- Native Obsidian 1.13 settings pages with searchable declarative controls and page-level navigation.
+- Dedicated control contract tests for native settings persistence and invalid-value rejection.
+- Actionable save failures that retain and display the underlying error message.
+
+### Changed
+
+- Obsidian 1.12 keeps the imperative settings fallback while 1.13 no longer renders custom top tabs.
+- The fallback tab bar now shares the Property Order and Chrono Notes visual, focus, overflow, and touch baseline.
+- Placeholder help now explains both parts of `{1.arabic}` in plain language.
+- Template cleanup labels explicitly cover built-in, active custom, and retired custom templates.
+- Built-in schemes use a clear restorable-delete action.
+
+### Fixed
+
+- Hidden save-status and retry elements can no longer be made visible by competing button or layout styles.
+
 ## 0.2.0 - 2026-08-08
 
 ### Added

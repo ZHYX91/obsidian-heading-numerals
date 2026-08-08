@@ -63,6 +63,11 @@ Recovery accepts files that still match either the exact before-state or verifie
 
 `data.json` contains schema-versioned settings only. A serialized save coordinator coalesces frequent controls, exposes pending/failure state, and keeps failed snapshots retryable. The latest batch snapshot lives separately in `recovery.json`; settings reset never deletes it. A configurable size limit bounds recovery storage.
 
+Obsidian 1.13 receives declarative page and control definitions from `src/ui/settings/definitions.ts`.
+`src/app/settings-control-contract.ts` is the single validated mapping between declarative control keys
+and persisted settings. Obsidian 1.12 uses the imperative renderer and shared fallback tab component;
+both surfaces call the same plugin persistence and scheme-management methods.
+
 Custom scheme edits archive the previous revision's templates. Cleanup can therefore recognize prefixes written by every active template and retained historical revision even after the display scheme changes or is deleted.
 
 ## Release contract

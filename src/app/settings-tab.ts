@@ -1,4 +1,10 @@
-import { App, Modal, PluginSettingTab, Setting } from "obsidian";
+import {
+  App,
+  Modal,
+  PluginSettingTab,
+  Setting,
+  type SettingDefinitionItem,
+} from "obsidian";
 
 import { createTranslator, type Translate } from "../config/i18n";
 import {
@@ -10,9 +16,16 @@ import type { SettingsSaveStatus } from "../config/settings-save-coordinator";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId } from "../core/schemes";
 import { compileTemplate, NUMBER_FORMATS, renderTemplate } from "../core/template-compiler";
 import { BUILT_IN_SCHEME_IDS, type CustomNumberingScheme } from "../core/types";
+import { getDeclarativeSettingDefinitions } from "../ui/settings/definitions";
 import { createSettingsTabs, type SettingsTabId } from "../ui/settings/tabs";
 import type HeadingNumeralsPlugin from "./plugin";
 import type { SettingsImpact } from "./plugin";
+import {
+  applySettingsControlValue,
+  getSettingsControlValue,
+  isSettingsControlKey,
+  type SettingsControlKey,
+} from "./settings-control-contract";
 
 const PREVIEW_COUNTERS = [2, 3, 4, 5, 6, 7] as [number, number, number, number, number, number];
 
@@ -87,17 +100,54 @@ class ResetSettingsModal extends Modal {
 export class HeadingNumeralsSettingTab extends PluginSettingTab {
   private activeTab: SettingsTabId = "general";
   private cleanup: (() => void) | null = null;
+  private imperativeVisible = false;
 
   constructor(app: App, private readonly plugin: HeadingNumeralsPlugin) {
     super(app, plugin);
   }
 
+  override getSettingDefinitions(): SettingDefinitionItem<SettingsControlKey>[] {
+    this.imperativeVisible = false;
+    const t = createTranslator(this.plugin.settings.language);
+    return getDeclarativeSettingDefinitions({
+      t,
+      selectedSchemeName: () => this.selectedSchemeName(createTranslator(this.plugin.settings.language)),
+      renderSaveStatus: (setting) => {
+        setting.settingEl.empty();
+        setting.settingEl.addClass("heading-numerals-settings-save-row");
+        return this.renderSaveStatus(setting.settingEl, t, true);
+      },
+      renderSchemes: (container) => this.renderSchemes(container, t),
+      renderCleanupHistory: (container) => this.renderCleanupHistory(container, t),
+      openResetModal: () => this.openResetModal(t),
+    });
+  }
+
+  override getControlValue(key: string): unknown {
+    if (!isSettingsControlKey(key)) return undefined;
+    return getSettingsControlValue(this.plugin.settings, key);
+  }
+
+  override async setControlValue(key: string, value: unknown): Promise<void> {
+    if (!isSettingsControlKey(key)) throw new Error(`Unsupported Heading Numerals setting: ${key}`);
+    const mutation = applySettingsControlValue(this.plugin.settings, key, value);
+    if (mutation.persistence === "scheduled") {
+      this.plugin.scheduleSettings(mutation.settings, mutation.impact);
+    } else {
+      await this.plugin.saveSettings(mutation.settings, mutation.impact);
+    }
+    if (mutation.refreshSurface) this.refreshSurface();
+  }
+
   override hide(): void {
+    this.imperativeVisible = false;
     this.cleanup?.();
     this.cleanup = null;
+    super.hide();
   }
 
   override display(): void {
+    this.imperativeVisible = true;
     this.cleanup?.();
     const { containerEl } = this;
     const settings = this.plugin.settings;
@@ -129,7 +179,33 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     };
   }
 
-  private renderSaveStatus(container: HTMLElement, t: Translate): () => void {
+  private selectedSchemeName(t: Translate): string {
+    const { selectedSchemeId, customSchemes } = this.plugin.settings;
+    if (isBuiltInSchemeId(selectedSchemeId)) return builtInName(selectedSchemeId, t);
+    const custom = customSchemes.find((scheme) => scheme.id === selectedSchemeId);
+    return custom == null ? selectedSchemeId : customSchemeName(custom, t);
+  }
+
+  private openResetModal(t: Translate): void {
+    new ResetSettingsModal(this.app, t, () => {
+      void this.plugin.saveSettings(cloneSettings(DEFAULT_SETTINGS), "all")
+        .then(() => this.refreshSurface())
+        .catch((error: unknown) => {
+          console.error("Heading Numerals: failed to reset settings", error);
+        });
+    }).open();
+  }
+
+  private refreshSurface(): void {
+    if (this.imperativeVisible) {
+      this.display();
+      return;
+    }
+    const update = (this as unknown as { readonly update?: () => void }).update;
+    update?.call(this);
+  }
+
+  private renderSaveStatus(container: HTMLElement, t: Translate, hideContainer = false): () => void {
     const row = container.ownerDocument.createElement("div");
     row.className = "heading-numerals-settings-save-status";
     const message = row.ownerDocument.createElement("span");
@@ -144,17 +220,23 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     container.append(row);
     const update = (status: SettingsSaveStatus): void => {
       row.hidden = status.state === "saved";
+      if (hideContainer) container.hidden = status.state === "saved";
       row.setAttribute("role", status.state === "pending" ? "alert" : "status");
       row.setAttribute("aria-live", status.state === "pending" ? "assertive" : "polite");
+      const errorDetail = status.state === "pending" ? settingsErrorMessage(status.error) : "";
       message.textContent = status.state === "scheduled"
         ? t("settings.save.scheduled")
-        : status.state === "saving" ? t("settings.save.saving") : t("settings.save.pending");
+        : status.state === "saving" ? t("settings.save.saving")
+          : errorDetail.length === 0
+            ? t("settings.save.pending")
+            : `${t("settings.save.pending")} ${errorDetail}`;
       retry.hidden = status.state !== "pending";
       retry.disabled = status.state !== "pending";
     };
     const unsubscribe = this.plugin.subscribeSettingsSaveStatus(update);
     return () => {
       unsubscribe();
+      if (hideContainer) container.hidden = false;
       retry.replaceWith(retry.cloneNode(true));
       row.remove();
     };
@@ -175,7 +257,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     } else {
       this.plugin.scheduleSettings(next, impact);
     }
-    if (rerender) this.display();
+    if (rerender) this.refreshSurface();
   }
 
   private renderGeneral(container: HTMLElement, t: Translate): void {
@@ -221,13 +303,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       .setName(t("settings.reset"))
       .setDesc(t("settings.reset.desc"))
       .addButton((button) => button.setButtonText(t("settings.reset.button")).setWarning().onClick(() => {
-        new ResetSettingsModal(this.app, t, () => {
-          void this.plugin.saveSettings(cloneSettings(DEFAULT_SETTINGS), "all")
-            .then(() => this.display())
-            .catch((error: unknown) => {
-              console.error("Heading Numerals: failed to reset settings", error);
-            });
-        }).open();
+        this.openResetModal(t);
       }));
   }
 
@@ -424,6 +500,10 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     new Setting(container).setName(t("settings.normalize")).addToggle((toggle) => toggle
       .setValue(this.plugin.settings.normalizeManualOnRenumber)
       .onChange((value) => this.commit((settings) => { settings.normalizeManualOnRenumber = value; }, "none", true)));
+    this.renderCleanupHistory(container, t);
+  }
+
+  private renderCleanupHistory(container: HTMLElement, t: Translate): void {
     new Setting(container).setName(t("settings.scheme.history")).setDesc(t("settings.scheme.history.desc")).setHeading();
     if (this.plugin.settings.cleanupHistory.length === 0) {
       container.createEl("p", { cls: "setting-item-description", text: t("settings.scheme.history.empty") });
@@ -472,4 +552,9 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       .setLimits(1, 100, 1).setDynamicTooltip().setValue(this.plugin.settings.batchBackupLimitMb)
       .onChange((value) => this.commit((settings) => { settings.batchBackupLimitMb = value; }, "none")));
   }
+}
+
+function settingsErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message.slice(0, 240);
+  return typeof error === "string" ? error.slice(0, 240) : "";
 }

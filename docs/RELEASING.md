@@ -12,7 +12,7 @@ Heading Numerals follows the same numeric-tag and three-loose-asset convention a
 
 ## Publication
 
-Push an immutable numeric tag such as `0.2.0`. `.github/workflows/release.yml` then:
+Push an immutable numeric tag such as `0.3.0`. `.github/workflows/release.yml` then:
 
 - checks that the tag/version and default-branch source agree;
 - installs the exact Node/npm/dependency versions;

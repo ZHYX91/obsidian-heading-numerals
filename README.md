@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current release: `0.2.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
+> Current release: `0.3.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
 
 ## 中文
 
@@ -123,7 +123,7 @@ The default cleanup scope recognizes plugin markers plus all current and retired
 
 - Requires Obsidian 1.12.7+ on desktop.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.2.0.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.3.0.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.

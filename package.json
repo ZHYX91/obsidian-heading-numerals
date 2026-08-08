@@ -1,6 +1,6 @@
 {
   "name": "obsidian-heading-numerals",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Write, remove, show, or conceal heading numbers in Obsidian.",
   "type": "module",
   "main": "dist/main.js",
