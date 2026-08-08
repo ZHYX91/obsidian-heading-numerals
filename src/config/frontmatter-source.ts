@@ -12,3 +12,17 @@ export function parseNoteOverridesFromSource(source: string): NoteOverrides | nu
     return null;
   }
 }
+
+export function parseFrontmatterRecordFromSource(source: string): Record<string, unknown> | null {
+  try {
+    const info = getFrontMatterInfo(source);
+    if (!info.exists) return {};
+    const value: unknown = parseYaml(info.frontmatter);
+    if (value == null) return {};
+    return typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}

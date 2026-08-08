@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Current release: `0.4.1`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
+> Current release: `0.5.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
 
 ## 中文
 
@@ -66,9 +66,13 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 - 移除当前笔记中的来源标记
 - 处理文件夹或整个库
 - 撤销最近一次批量处理
-- 循环切换当前笔记显示模式
+- 打开当前笔记控制面板
 
 ### Properties 覆盖
+
+单击 Obsidian 左侧栏的 Heading Numerals 图标会打开紧凑的当前笔记控制面板。面板会显示笔记名，以及每项设置的“全局值 / 当前笔记覆盖 / 最终生效值”。显示虚拟序号和隐藏已有序号分别提供“跟随全局 / 开启 / 关闭”，序号方案只能从内置及自定义方案中选择；还可以完全忽略当前笔记、全部恢复为跟随全局、执行当前笔记快速操作、打开批处理或全局设置。
+
+默认不会向笔记写入任何属性。只有明确设置覆盖时才通过 Obsidian 的 Properties API 写入；改回“跟随全局”会删除对应属性，“全部恢复”会删除所有 Heading Numerals 笔记级属性。命令面板入口仍保留，便于设置快捷键。
 
 ```yaml
 ---
@@ -81,7 +85,7 @@ heading-numerals-start:
 ---
 ```
 
-`heading-numerals-show-virtual` 与 `heading-numerals-conceal-stored` 可以分别设为 `true` 或 `false`。旧的 `heading-numerals` 仍兼容 `inherit`、`normal`、`show`、`conceal`、`show-conceal` 和 `off`。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
+通常不需要手写这些属性。`heading-numerals-show-virtual` 与 `heading-numerals-conceal-stored` 可以分别设为 `true` 或 `false`。旧的 `heading-numerals` 仍兼容 `inherit`、`normal`、`show`、`conceal`、`show-conceal` 和 `off`，在面板中修改显示项时会无损迁移为独立属性。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
 
 ### 安装与开发
 
@@ -105,6 +109,7 @@ heading-numerals-start:
 - Renumber a note using the same engine as virtual display.
 - Process a folder or the whole vault with atomic stale-content guards, a persisted recovery snapshot, and conflict-safe rollback.
 - Override virtual display, stored-number concealment, scheme, cleanup scope, and starting counters per note through Properties.
+- Open a compact current-note control panel from the left ribbon, with global, override, and effective values shown side by side.
 - Add, edit, and delete multiple custom schemes while retaining retired template revisions for cleanup.
 - Use English or Simplified Chinese UI text.
 
@@ -116,6 +121,12 @@ Optional U+2060 source markers make plugin-written numbers exact to identify, bu
 
 Writing or removing numbers changes heading text. Existing links to headings may need manual repair; Heading Numerals does not rewrite links automatically.
 
+### Current-note controls and Properties
+
+Click the Heading Numerals ribbon icon to open the current-note panel. Virtual display and stored-number concealment each have independent Follow global / On / Off states. The scheme is selected from available built-in and custom schemes; users never need to type an internal scheme ID. The panel also exposes note ignore, reset-to-global, current-note file actions, batch processing, and global settings.
+
+An untouched note gets no plugin Properties. Explicit overrides are written through Obsidian's Properties API and take priority over global settings. Choosing Follow global deletes the corresponding property; Restore all removes every Heading Numerals note override. Command-palette entries remain available for keyboard shortcuts and experienced users.
+
 ### Template placeholders and cleanup
 
 A placeholder uses `{heading-level.number-format}`. For example, `{1.arabic}` renders the H1 counter as `1`, while `{2.chinese_lower}` renders the H2 counter as `一`. The settings page lists every supported format with examples and exposes each built-in template in an expandable card.
@@ -126,7 +137,7 @@ The default cleanup scope recognizes plugin markers plus all current and retired
 
 - Requires Obsidian 1.12.7+ on desktop or mobile. Windows and an Android 15 emulator have dated records; physical Android devices, macOS, and Linux remain separate open acceptance targets.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.4.1.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.5.0.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.

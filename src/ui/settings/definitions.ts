@@ -77,6 +77,13 @@ function generalDefinitions(
       DEFAULT_SETTINGS.concealStoredNumbers,
     ),
     {
+      name: t("settings.noteOverrides"),
+      desc: t("settings.noteOverrides.desc"),
+      render: (setting) => {
+        setting.settingEl.addClass("heading-numerals-note-overrides-help");
+      },
+    },
+    {
       name: t("settings.maxLevel"),
       control: {
         type: "slider",

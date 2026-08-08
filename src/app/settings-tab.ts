@@ -241,6 +241,10 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       .setDesc(t("settings.concealStored.desc"))
       .addToggle((toggle) => toggle.setValue(this.plugin.settings.concealStoredNumbers)
         .onChange((value) => this.updateControl("general.concealStoredNumbers", value)));
+    const noteOverridesHelp = new Setting(container)
+      .setName(t("settings.noteOverrides"))
+      .setDesc(t("settings.noteOverrides.desc"));
+    noteOverridesHelp.settingEl.addClass("heading-numerals-note-overrides-help");
     new Setting(container)
       .setName(t("settings.maxLevel"))
       .addSlider((slider) => slider.setLimits(1, 6, 1).setDynamicTooltip()

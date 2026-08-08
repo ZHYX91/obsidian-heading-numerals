@@ -2,6 +2,24 @@
 
 All notable changes will be documented in this file.
 
+## 0.5.0 - 2026-08-09
+
+### Added
+
+- Added a compact current-note control panel to the ribbon and command palette.
+- Added independent tri-state note overrides for virtual numbering and stored-number concealment.
+- Added a note-level scheme picker, ignore control, restore-all action, quick file operations, and links to batch processing and global settings.
+
+### Changed
+
+- Note overrides are written only after an explicit choice through Obsidian's public Properties API; Follow global deletes the corresponding property.
+- The control panel shows global, note override, and effective values, with a responsive mobile summary.
+- Legacy combined display overrides migrate to independent Properties without changing the unedited effect.
+
+### Fixed
+
+- The current-note panel now leaves its loading state after a successful Properties write, so consecutive changes and scrolling remain interactive.
+
 ## 0.4.1 - 2026-08-09
 
 ### Changed

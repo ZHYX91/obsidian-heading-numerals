@@ -1,11 +1,10 @@
 import {
   MarkdownView,
-  Menu,
   Notice,
   Plugin,
-  type TFile,
 } from "obsidian";
 
+import { openObsidianPluginSettings } from "../adapters/obsidian/plugin-settings";
 import { RecoveryStore } from "../adapters/obsidian/recovery-store";
 import {
   updateDisplayPreferences,
@@ -27,16 +26,13 @@ import {
   type SettingsSaveStatus,
 } from "../config/settings-save-coordinator";
 import {
-  DISPLAY_MODES,
-  displayModeToPreferences,
-  preferencesToDisplayMode,
   type DisplayMode,
   type TransformOperation,
 } from "../core/types";
 import { HeadingDisplayController } from "../editor/heading-display-extension";
 import { HeadingReadingProcessor } from "../reading/heading-postprocessor";
+import { NoteControlModal } from "../ui/note-control-modal";
 import { HeadingNumeralsSettingTab } from "./settings-tab";
-import { populateRibbonMenu } from "./ribbon-menu";
 import type { SettingsImpact } from "./settings-impact";
 
 export default class HeadingNumeralsPlugin extends Plugin {
@@ -185,31 +181,44 @@ export default class HeadingNumeralsPlugin extends Plugin {
       },
     });
     this.addCommand({
-      id: "cycle-current-note-view-mode",
-      name: this.translate()("command.note.cycle"),
+      id: "open-current-note-controls",
+      name: this.translate()("command.note.controls"),
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         const available = file?.extension.toLowerCase() === "md";
-        if (!checking && available && file != null) {
-          void this.cycleNoteMode(file);
-        }
+        if (!checking && available) this.openCurrentNotePanel();
         return available;
       },
     });
   }
 
   private addRibbon(): void {
-    this.addRibbonIcon("list-ordered", "Heading Numerals", (event) => {
-      const menu = new Menu();
-      populateRibbonMenu(menu, this.settings, this.translate(), {
-        updateDisplay: (action) => void this.updateDisplayPreference(action).catch((error: unknown) => {
-          console.error("Heading Numerals: failed to update display preference", error);
-        }),
-        runCurrent: (operation) => this.runCurrent(operation),
-        openBatch: () => this.batchController?.open(this.translate()),
-      });
-      menu.showAtMouseEvent(event);
+    this.addRibbonIcon("list-ordered", this.translate()("panel.ribbon"), () => {
+      this.openCurrentNotePanel();
     });
+  }
+
+  private openCurrentNotePanel(): void {
+    const file = this.app.workspace.getActiveFile();
+    if (file == null || file.extension.toLowerCase() !== "md") {
+      new Notice(this.translate()("notice.noActiveNote"));
+      return;
+    }
+    const t = this.translate();
+    new NoteControlModal(this.app, file, () => this.settings, t, {
+      refreshDisplay: () => {
+        this.readingProcessor?.invalidate();
+        this.displayController?.refreshAll();
+        this.rerenderReadingViews();
+      },
+      runCurrent: (operation) => this.runCurrent(operation),
+      openBatch: () => this.batchController?.open(this.translate()),
+      openGlobalSettings: () => {
+        if (!openObsidianPluginSettings(this.app, this.manifest.id)) {
+          new Notice(t("panel.settingsUnavailable"));
+        }
+      },
+    }).open();
   }
 
   private runCurrent(operation: TransformOperation): void {
@@ -223,49 +232,6 @@ export default class HeadingNumeralsPlugin extends Plugin {
     next.concealStoredNumbers = update.concealStoredNumbers;
     await this.saveSettings(next, "display");
     new Notice(this.translate()(update.noticeKey));
-  }
-
-  private async cycleNoteMode(file: TFile): Promise<void> {
-    let nextMode: DisplayMode | "inherit" = "show";
-    await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-      const values = frontmatter as Record<string, unknown>;
-      const legacy = values["heading-numerals"];
-      const legacyMode = typeof legacy === "string" && DISPLAY_MODES.includes(legacy as DisplayMode)
-        ? legacy as DisplayMode
-        : null;
-      const legacyPreferences = legacyMode == null ? null : displayModeToPreferences(legacyMode);
-      const currentMode = legacyPreferences == null
-        && typeof values["heading-numerals-show-virtual"] !== "boolean"
-        && typeof values["heading-numerals-conceal-stored"] !== "boolean"
-        ? "inherit"
-        : preferencesToDisplayMode({
-          showVirtualNumbers: typeof values["heading-numerals-show-virtual"] === "boolean"
-            ? values["heading-numerals-show-virtual"]
-            : legacyPreferences?.showVirtualNumbers ?? this.settings.showVirtualNumbers,
-          concealStoredNumbers: typeof values["heading-numerals-conceal-stored"] === "boolean"
-            ? values["heading-numerals-conceal-stored"]
-            : legacyPreferences?.concealStoredNumbers ?? this.settings.concealStoredNumbers,
-        });
-      nextMode = currentMode === "inherit"
-        ? "show"
-        : currentMode === "show" ? "conceal"
-          : currentMode === "conceal" ? "show-conceal"
-            : currentMode === "show-conceal" ? "normal" : "inherit";
-      delete values["heading-numerals-show-virtual"];
-      delete values["heading-numerals-conceal-stored"];
-      if (nextMode === "inherit") {
-        delete values["heading-numerals"];
-      } else {
-        values["heading-numerals"] = nextMode;
-      }
-    });
-    this.displayController?.refreshAll();
-    this.rerenderReadingViews();
-    const resolvedMode = nextMode as DisplayMode | "inherit";
-    const label = resolvedMode === "inherit"
-      ? this.translate()(`mode.${preferencesToDisplayMode(this.settings)}`)
-      : this.translate()(`mode.${resolvedMode}`);
-    new Notice(this.translate()("notice.mode", { mode: label }));
   }
 
   private rerenderReadingViews(): void {

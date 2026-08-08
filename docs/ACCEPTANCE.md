@@ -12,6 +12,11 @@ Automated checks are necessary but do not prove Obsidian runtime behavior. Compl
 
 ## Highest-value loop
 
+- [ ] Click the ribbon icon and confirm it opens the current-note panel without changing the note or global settings.
+- [ ] Confirm the panel names the active note and shows global, current-note override, and effective values.
+- [ ] Set virtual display and concealment independently through Follow global / On / Off; re-open the panel and verify persistence and effective display.
+- [ ] Choose a built-in and a custom scheme from the panel without typing an ID; Follow global must delete the scheme property.
+- [ ] Enable note ignore, then restore all to Follow global; verify all plugin Properties are removed and unrelated Properties remain byte-for-byte equivalent.
 - [ ] In Live Preview, show virtual numbers for an unnumbered note and confirm the file hash and mtime do not change.
 - [ ] Switch to Reading View and confirm numbering continues correctly across rendered sections.
 - [ ] Write numbers to the current note, inspect the preview, apply, then undo and redo once.
