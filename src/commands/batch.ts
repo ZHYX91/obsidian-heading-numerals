@@ -6,6 +6,7 @@ import type {
   LastBatchSnapshot,
 } from "../config/settings";
 import type { TransformOperation } from "../core/types";
+import { digestText } from "../core/text-digest";
 import { BatchOperationModal, FolderScopeModal, type BatchScope } from "../ui/batch-modals";
 import { ChangePreviewModal, type PreviewDocument } from "../ui/preview-modal";
 import { createSourcePlan } from "./transform-options";
@@ -53,7 +54,7 @@ export class BatchController {
       return;
     }
     await this.saveOpenMarkdownViews();
-    const preflight: Array<{ file: TFile; current: string; before: string; after: string }> = [];
+    const preflight: Array<{ file: TFile; current: string; before: string }> = [];
     for (const item of snapshot.files) {
       const file = this.app.vault.getAbstractFileByPath(item.path);
       if (!(file instanceof TFile)) {
@@ -61,18 +62,21 @@ export class BatchController {
         return;
       }
       const current = await this.app.vault.cachedRead(file);
-      if (current !== item.before && current !== item.after) {
+      const matchesAfter = item.legacyAfter != null
+        ? current === item.legacyAfter
+        : await digestText(current) === item.afterHash;
+      if (current !== item.before && !matchesAfter) {
         new Notice(translate("notice.undoConflict"));
         return;
       }
-      preflight.push({ file, current, before: item.before, after: item.after });
+      preflight.push({ file, current, before: item.before });
     }
     const restored: Array<{ file: TFile; after: string }> = [];
     try {
       for (const item of preflight) {
-        if (item.current === item.after) {
+        if (item.current !== item.before) {
           await this.app.vault.modify(item.file, item.before);
-          restored.push({ file: item.file, after: item.after });
+          restored.push({ file: item.file, after: item.current });
         }
       }
       await this.persistence.setLastBatch(null);
@@ -165,11 +169,11 @@ export class BatchController {
       createdAt: new Date().toISOString(),
       operation,
       status: "pending",
-      files: files.map((item) => ({
+      files: await Promise.all(files.map(async (item) => ({
         path: item.file.path,
         before: item.before,
-        after: item.after,
-      })),
+        afterHash: await digestText(item.after),
+      }))),
     };
     const limit = this.getSettings().batchBackupLimitMb;
     if (snapshotSizeBytes(snapshot) > limit * 1024 * 1024) {

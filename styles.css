@@ -19,6 +19,85 @@
   display: none;
 }
 
+.heading-numerals-settings-save-status {
+  align-items: center;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: space-between;
+  margin-block-end: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.heading-numerals-settings-save-status[role="alert"] {
+  border-color: var(--text-error);
+  color: var(--text-error);
+}
+
+.heading-numerals-settings-tabs {
+  border-block-end: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: var(--size-4-1);
+  margin-block: var(--size-4-2) var(--size-4-4);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.heading-numerals-settings-tab {
+  background: transparent;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  margin: 0;
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.heading-numerals-settings-tab:hover,
+.heading-numerals-settings-tab:focus-visible {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.heading-numerals-settings-tab.is-active {
+  border-block-end-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.heading-numerals-settings-panel:focus {
+  outline: none;
+}
+
+.heading-numerals-scheme-card,
+.heading-numerals-placeholder-help {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  margin-block: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.heading-numerals-scheme-card > summary,
+.heading-numerals-placeholder-help > summary {
+  cursor: pointer;
+  font-weight: var(--font-semibold);
+}
+
+.heading-numerals-template-preview,
+.heading-numerals-template-validation {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-inline-start: var(--size-4-4);
+}
+
+.heading-numerals-template-validation:not([hidden]) {
+  color: var(--text-error);
+  margin-block: var(--size-4-2);
+}
+
 .modal:has(.heading-numerals-preview) {
   width: min(920px, 92vw);
 }

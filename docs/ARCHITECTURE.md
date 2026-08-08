@@ -7,7 +7,7 @@ Heading Numerals has one pure numbering core and thin Obsidian adapters. File op
 ```text
 Markdown source
   -> context-aware ATX scanner
-  -> shared number-prefix parser
+  -> template compiler + shared prefix analysis
   -> numbering engine and scheme templates
   -> immutable transform plan OR display decoration plan
   -> Editor/Vault adapter OR Live Preview/Reading View adapter
@@ -16,10 +16,12 @@ Markdown source
 ## Core boundaries
 
 - `src/core/heading-parser.ts` scans ATX headings while excluding YAML, fenced code, HTML comments, and HTML blocks. It returns source offsets and never imports Obsidian.
-- `src/core/number-parser.ts` classifies plugin and manual prefixes with provenance, style, rule ID, and confidence. Decimal/version/year/measurement-like text is downgraded or rejected.
+- `src/core/template-compiler.ts` parses placeholders into a small literal/counter AST used for rendering, validation, and exact template-prefix recognition.
+- `src/core/number-parser.ts` classifies plugin, template, and manual prefixes with provenance, style, rule ID, and confidence. `src/core/prefix-analysis.ts` is the one entry point shared by writes and displays.
 - `src/core/numbering-engine.ts` owns H1-H6 counters, resets, starts, maximum level, and skipped-level strategy.
-- `src/core/schemes.ts` formats all built-in and custom template styles.
+- `src/core/schemes.ts` resolves immutable built-in and dynamically persisted custom schemes; number-format rendering is isolated in `number-formats.ts`.
 - `src/core/transform.ts` creates immutable changes and warnings before any write happens.
+- `src/application/display-plan.ts` creates host-independent virtual/conceal ranges consumed by both Obsidian display adapters.
 
 ## Live Preview
 
@@ -37,7 +39,7 @@ Each editor view owns its own cached Properties override. Invalid YAML retains t
 
 ## Reading View
 
-The Markdown postprocessor reads and numbers the full source document, then maps the current `MarkdownSectionInformation` line range to rendered headings. It applies nothing unless source and rendered heading counts and levels agree exactly.
+The Markdown postprocessor reads and numbers the full source document once per file/settings generation, then maps each `MarkdownSectionInformation` line range to rendered headings. It applies nothing unless source and rendered heading counts and levels agree exactly.
 
 Virtual numbers are prepended using DOM node APIs. Concealment validates the exact leading text before wrapping it. No heading content is passed to `innerHTML`.
 
@@ -51,15 +53,17 @@ Batch operations:
 2. read and plan every target file;
 3. show an aggregate preview;
 4. verify every source again;
-5. persist a bounded before/after recovery snapshot;
+5. persist a bounded recovery snapshot containing each before-state and a SHA-256 after-state digest;
 6. modify files sequentially; and
 7. roll back all completed writes after an error.
 
-Recovery accepts files that still match either the before or after state, so it can repair a process interrupted halfway through a batch. Any independently edited file cancels recovery before writes begin.
+Recovery accepts files that still match either the exact before-state or verified after-state digest, so it can repair a process interrupted halfway through a batch without duplicating both full file versions. Any independently edited file cancels recovery before writes begin.
 
 ## Settings storage
 
-Plugin settings and the most recent batch snapshot share Obsidian's plugin data storage. Settings reset never deletes the recovery snapshot. A configurable size limit prevents an unbounded `data.json`.
+`data.json` contains schema-versioned settings only. A serialized save coordinator coalesces frequent controls, exposes pending/failure state, and keeps failed snapshots retryable. The latest batch snapshot lives separately in `recovery.json`; settings reset never deletes it. A configurable size limit bounds recovery storage.
+
+Custom scheme edits archive the previous revision's templates. Cleanup can therefore recognize prefixes written by every active template and retained historical revision even after the display scheme changes or is deleted.
 
 ## Release contract
 

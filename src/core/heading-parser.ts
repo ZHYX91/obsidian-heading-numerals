@@ -52,6 +52,7 @@ export function parseAtxHeadings(source: string): ParsedHeading[] {
   let fenceCharacter: "`" | "~" | null = null;
   let fenceLength = 0;
   let inComment = false;
+  let inObsidianComment = false;
   let rawTag: string | null = null;
   let genericHtmlBlock = false;
 
@@ -94,6 +95,16 @@ export function parseAtxHeadings(source: string): ParsedHeading[] {
       if (end >= 0) {
         inComment = false;
       }
+      continue;
+    }
+    if (inObsidianComment) {
+      if (line.text.includes("%%")) inObsidianComment = false;
+      continue;
+    }
+    const obsidianComment = /^ {0,3}%%/u.exec(line.text);
+    if (obsidianComment != null) {
+      const closing = line.text.indexOf("%%", obsidianComment[0].length);
+      if (closing < 0) inObsidianComment = true;
       continue;
     }
     const commentStart = line.text.indexOf("<!--");

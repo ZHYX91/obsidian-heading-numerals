@@ -1,10 +1,26 @@
 import { App, normalizePath, TFile, type MarkdownPostProcessorContext } from "obsidian";
 
 import { parseNoteOverrides, resolveNoteSettings } from "../config/frontmatter";
-import { toNumberingOptions, type HeadingNumeralsSettings } from "../config/settings";
+import {
+  cleanupTemplateSources,
+  toNumberingOptions,
+  type HeadingNumeralsSettings,
+} from "../config/settings";
 import { parseAtxHeadings } from "../core/heading-parser";
 import { WORD_JOINER } from "../core/markers";
-import { createDisplayPlan } from "../editor/display-plan";
+import { createDisplayPlan } from "../application/display-plan";
+import type { DisplayDecorationPlan } from "../application/display-plan";
+import type { ParsedHeading } from "../core/types";
+
+interface CachedReadingPlan {
+  readonly headings: readonly ParsedHeading[];
+  readonly displayPlan: readonly DisplayDecorationPlan[];
+}
+
+interface ReadingPlanCacheEntry {
+  readonly fingerprint: string;
+  readonly promise: Promise<CachedReadingPlan>;
+}
 
 function headingElements(container: HTMLElement): HTMLHeadingElement[] {
   const output: HTMLHeadingElement[] = [];
@@ -92,10 +108,16 @@ function concealPrefix(element: HTMLHeadingElement, sourcePrefix: string): boole
 }
 
 export class HeadingReadingProcessor {
+  private readonly cache = new Map<string, ReadingPlanCacheEntry>();
+
   constructor(
     private readonly app: App,
     private readonly getSettings: () => HeadingNumeralsSettings,
   ) {}
+
+  invalidate(): void {
+    this.cache.clear();
+  }
 
   async process(container: HTMLElement, context: MarkdownPostProcessorContext): Promise<void> {
     const settings = this.getSettings();
@@ -110,23 +132,26 @@ export class HeadingReadingProcessor {
     if (!(file instanceof TFile) || file.extension.toLowerCase() !== "md") {
       return;
     }
-    const source = await this.app.vault.cachedRead(file);
+    const fingerprint = JSON.stringify({
+      mtime: file.stat?.mtime ?? 0,
+      size: file.stat?.size ?? 0,
+      settings,
+      effective,
+    });
+    let cached = this.cache.get(file.path);
+    if (cached == null || cached.fingerprint !== fingerprint) {
+      const promise = this.buildPlan(file, settings, effective);
+      cached = { fingerprint, promise };
+      this.cache.set(file.path, cached);
+      void promise.catch(() => {
+        if (this.cache.get(file.path)?.promise === promise) this.cache.delete(file.path);
+      });
+    }
+    const { headings, displayPlan } = await cached.promise;
     const section = context.getSectionInfo(container);
     if (section == null || !container.isConnected) {
       return;
     }
-    const headings = parseAtxHeadings(source);
-    const displayPlan = createDisplayPlan(headings, {
-      mode: effective.displayMode,
-      numbering: toNumberingOptions(settings, {
-        scheme: effective.scheme,
-        starts: effective.starts,
-      }),
-      cleanupThreshold: effective.cleanupThreshold,
-      revealOnActiveLine: false,
-      selections: [],
-      composing: false,
-    });
     const sectionHeadings = headings.filter((heading) => (
       heading.line >= section.lineStart && heading.line <= section.lineEnd
     ));
@@ -160,5 +185,29 @@ export class HeadingReadingProcessor {
         }
       }
     }
+  }
+
+  private async buildPlan(
+    file: TFile,
+    settings: HeadingNumeralsSettings,
+    effective: ReturnType<typeof resolveNoteSettings>,
+  ): Promise<CachedReadingPlan> {
+    const source = await this.app.vault.cachedRead(file);
+    const headings = parseAtxHeadings(source);
+    return {
+      headings,
+      displayPlan: createDisplayPlan(headings, {
+        mode: effective.displayMode,
+        numbering: toNumberingOptions(settings, {
+          schemeId: effective.schemeId,
+          starts: effective.starts,
+        }),
+        cleanupScope: effective.cleanupScope,
+        templateSources: cleanupTemplateSources(settings),
+        revealOnActiveLine: false,
+        selections: [],
+        composing: false,
+      }),
+    };
   }
 }

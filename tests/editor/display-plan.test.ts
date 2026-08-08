@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAtxHeadings } from "../../src/core/heading-parser";
+import { BUILT_IN_SCHEMES } from "../../src/core/schemes";
 import type { NumberingOptions } from "../../src/core/types";
-import { createDisplayPlan, type DisplayPlanOptions } from "../../src/editor/display-plan";
+import { createDisplayPlan, type DisplayPlanOptions } from "../../src/application/display-plan";
 
 const numbering: NumberingOptions = {
-  scheme: "hierarchical",
-  customTemplates: [],
-  customBaseLevel: 1,
+  scheme: BUILT_IN_SCHEMES.hierarchical,
   maxLevel: 6,
   missingLevelStrategy: "fill-one",
   starts: {},
@@ -17,7 +16,13 @@ function options(overrides: Partial<DisplayPlanOptions>): DisplayPlanOptions {
   return {
     mode: "show",
     numbering,
-    cleanupThreshold: "high",
+    cleanupScope: "templates",
+    templateSources: [{
+      schemeId: "hierarchical",
+      schemeName: "Hierarchical",
+      revision: 1,
+      templates: BUILT_IN_SCHEMES.hierarchical.templates,
+    }],
     revealOnActiveLine: true,
     selections: [],
     composing: false,
@@ -37,7 +42,10 @@ describe("display plan", () => {
 
   it("conceals high-confidence prefixes", () => {
     const source = "# 1.1 Stored\n# 1. Medium\n# 3.14 Pi";
-    const plan = createDisplayPlan(parseAtxHeadings(source), options({ mode: "conceal" }));
+    const plan = createDisplayPlan(parseAtxHeadings(source), options({
+      mode: "conceal",
+      cleanupScope: "common",
+    }));
     expect(plan).toHaveLength(1);
     expect(source.slice(plan[0]?.from, plan[0]?.to)).toBe("1.1 ");
   });

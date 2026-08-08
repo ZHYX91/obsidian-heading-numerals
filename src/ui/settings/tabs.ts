@@ -1,0 +1,67 @@
+export type SettingsTabId = "general" | "schemes" | "cleanup" | "views";
+
+export interface SettingsTabDefinition {
+  readonly id: SettingsTabId;
+  readonly label: string;
+}
+
+export function createSettingsTabs(
+  container: HTMLElement,
+  definitions: readonly SettingsTabDefinition[],
+  activeId: SettingsTabId,
+  ariaLabel: string,
+  onSelect: (id: SettingsTabId) => void,
+): { panel: HTMLElement; cleanup: () => void } {
+  const document = container.ownerDocument;
+  const list = document.createElement("div");
+  list.className = "heading-numerals-settings-tabs";
+  list.setAttribute("role", "tablist");
+  list.setAttribute("aria-label", ariaLabel);
+  list.setAttribute("aria-orientation", "horizontal");
+  const listeners: Array<() => void> = [];
+  const buttons = definitions.map((definition, index) => {
+    const button = document.createElement("button");
+    const active = definition.id === activeId;
+    button.type = "button";
+    button.className = `heading-numerals-settings-tab${active ? " is-active" : ""}`;
+    button.textContent = definition.label;
+    button.id = `heading-numerals-settings-tab-${definition.id}`;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(active));
+    button.setAttribute("aria-controls", `heading-numerals-settings-panel-${definition.id}`);
+    button.tabIndex = active ? 0 : -1;
+    const click = (): void => onSelect(definition.id);
+    const keydown = (event: KeyboardEvent): void => {
+      let target = index;
+      if (event.key === "ArrowRight") target = (index + 1) % definitions.length;
+      else if (event.key === "ArrowLeft") target = (index - 1 + definitions.length) % definitions.length;
+      else if (event.key === "Home") target = 0;
+      else if (event.key === "End") target = definitions.length - 1;
+      else return;
+      event.preventDefault();
+      const next = definitions[target];
+      if (next != null) onSelect(next.id);
+    };
+    button.addEventListener("click", click);
+    button.addEventListener("keydown", keydown);
+    listeners.push(() => {
+      button.removeEventListener("click", click);
+      button.removeEventListener("keydown", keydown);
+    });
+    list.append(button);
+    return button;
+  });
+  container.append(list);
+  const panel = document.createElement("div");
+  panel.className = "heading-numerals-settings-panel";
+  panel.id = `heading-numerals-settings-panel-${activeId}`;
+  panel.setAttribute("role", "tabpanel");
+  panel.setAttribute("aria-labelledby", `heading-numerals-settings-tab-${activeId}`);
+  panel.tabIndex = 0;
+  container.append(panel);
+  const activeButton = buttons.find((button) => button.classList.contains("is-active"));
+  document.defaultView?.requestAnimationFrame(() => (
+    activeButton?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  ));
+  return { panel, cleanup: () => listeners.reverse().forEach((cleanup) => cleanup()) };
+}

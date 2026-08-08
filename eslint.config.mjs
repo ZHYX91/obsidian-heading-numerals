@@ -48,7 +48,20 @@ export default defineConfig([
     files: ["src/app/settings-tab.ts", "src/ui/preview-modal.ts"],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
+      "obsidianmd/prefer-create-el": "off",
       "obsidianmd/settings-tab/prefer-setting-definitions": "off",
+    },
+  },
+  {
+    files: ["src/ui/settings/**/*.ts"],
+    rules: {
+      "obsidianmd/prefer-create-el": "off",
+    },
+  },
+  {
+    files: ["src/config/settings-save-coordinator.ts"],
+    rules: {
+      "obsidianmd/prefer-window-timers": "off",
     },
   },
   {

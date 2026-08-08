@@ -1,11 +1,13 @@
-import {
-  isExpectedUnmarkedNumber,
-  isSuspiciousNumericPrefix,
-  meetsCleanupThreshold,
-  parseHeadingNumberPrefixes,
-} from "../core/number-parser";
+import { meetsCleanupScope } from "../core/number-parser";
 import { numberHeadings } from "../core/numbering-engine";
-import type { CleanupThreshold, DisplayMode, NumberingOptions, ParsedHeading } from "../core/types";
+import { analyzeHeadingPrefix } from "../core/prefix-analysis";
+import type {
+  CleanupScope,
+  CleanupTemplateSource,
+  DisplayMode,
+  NumberingOptions,
+  ParsedHeading,
+} from "../core/types";
 
 export interface SelectionSpan {
   from: number;
@@ -23,7 +25,8 @@ export interface DisplayDecorationPlan {
 export interface DisplayPlanOptions {
   mode: DisplayMode;
   numbering: NumberingOptions;
-  cleanupThreshold: CleanupThreshold;
+  cleanupScope: CleanupScope;
+  templateSources: readonly CleanupTemplateSource[];
   revealOnActiveLine: boolean;
   selections: readonly SelectionSpan[];
   composing: boolean;
@@ -55,10 +58,10 @@ export function createDisplayPlan(
     if (item.label == null || heading.content.trim().length === 0) {
       continue;
     }
-    const matches = parseHeadingNumberPrefixes(heading.content);
-    const expectedUnmarked = isExpectedUnmarkedNumber(matches[0] ?? null, item.label);
+    const analysis = analyzeHeadingPrefix(heading, item.label, options.templateSources);
+    const { matches, expectedUnmarked } = analysis;
     if (options.mode === "show") {
-      if (matches.length === 0 && !isSuspiciousNumericPrefix(heading.content)) {
+      if (matches.length === 0 && !analysis.suspicious) {
         decorations.push({
           kind: "virtual",
           from: heading.contentFrom,
@@ -79,7 +82,7 @@ export function createDisplayPlan(
     for (const match of matches) {
       if (
         match.from !== concealTo
-        || (!meetsCleanupThreshold(match, options.cleanupThreshold)
+        || (!meetsCleanupScope(match, options.cleanupScope)
           && !(concealTo === 0 && expectedUnmarked))
       ) {
         break;

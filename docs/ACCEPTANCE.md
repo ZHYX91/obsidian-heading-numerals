@@ -28,10 +28,11 @@ Automated checks are necessary but do not prove Obsidian runtime behavior. Compl
 
 ## Parser safety
 
-- [ ] YAML, backtick/tilde code fences, HTML comments/blocks, blockquotes, lists, and Setext headings remain unchanged.
+- [ ] YAML, backtick/tilde code fences, HTML comments/blocks, Obsidian `%%` comments, blockquotes, lists, and Setext headings remain unchanged.
 - [ ] `3.14`, `2.0`, `2026`, dates, and unit quantities remain visible and are not removed by high-confidence cleanup.
 - [ ] Wiki links, aliases, bold text, inline code, Emoji, CRLF, trailing hashes, BOM, and final newline are preserved.
 - [ ] Multi-prefix headings appear clearly in preview.
+- [ ] Prefixes produced by an active custom scheme and an archived pre-edit/pre-delete revision are both found by template cleanup; unrelated manual numbering remains unchanged.
 
 ## Source markers
 
@@ -52,6 +53,7 @@ Source markers are disabled by default. Before enabling them for a release claim
 - [ ] Independently edit one applied file; restore must cancel without changing any file.
 - [ ] Simulate a mid-batch error and confirm completed files roll back or remain recoverable from the pending snapshot.
 - [ ] Excluded folders are not read into the preview and are not modified.
+- [ ] `data.json` contains settings only; recovery data is stored in `recovery.json`, and failed setting writes remain visibly retryable.
 
 ## Themes and platform
 

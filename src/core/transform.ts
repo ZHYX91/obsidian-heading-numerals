@@ -1,14 +1,11 @@
 import { parseAtxHeadings } from "./heading-parser";
-import { hasMalformedPluginMarker, wrapPluginNumber } from "./markers";
-import {
-  isSuspiciousNumericPrefix,
-  isExpectedUnmarkedNumber,
-  meetsCleanupThreshold,
-  parseHeadingNumberPrefixes,
-} from "./number-parser";
+import { wrapPluginNumber } from "./markers";
+import { meetsCleanupScope } from "./number-parser";
 import { numberHeadings } from "./numbering-engine";
+import { analyzeHeadingPrefix } from "./prefix-analysis";
 import type {
-  CleanupThreshold,
+  CleanupScope,
+  CleanupTemplateSource,
   NumberingOptions,
   PlannedChange,
   PlanWarning,
@@ -19,7 +16,8 @@ import type {
 export interface TransformOptions {
   numbering: NumberingOptions;
   writeMarkers: boolean;
-  cleanupThreshold: CleanupThreshold;
+  cleanupScope: CleanupScope;
+  templateSources: readonly CleanupTemplateSource[];
   removeMultiplePrefixes: boolean;
   normalizeManualOnRenumber: boolean;
 }
@@ -81,10 +79,8 @@ export function planHeadingTransform(
       continue;
     }
 
-    const matches = parseHeadingNumberPrefixes(content);
-    const first = matches[0] ?? null;
-    const expectedUnmarked = isExpectedUnmarkedNumber(first, item.label);
-    const malformedMarker = hasMalformedPluginMarker(content);
+    const analysis = analyzeHeadingPrefix(heading, item.label, options.templateSources);
+    const { matches, first, expectedUnmarked, malformedMarker } = analysis;
 
     if (operation === "strip-markers") {
       if (first?.provenance !== "plugin") {
@@ -116,7 +112,7 @@ export function planHeadingTransform(
 
     if (operation === "remove") {
       if (first == null) {
-        if (malformedMarker || isSuspiciousNumericPrefix(content)) {
+        if (analysis.suspicious) {
           warnings.push({
             line: heading.line,
             heading: content,
@@ -130,7 +126,7 @@ export function planHeadingTransform(
         if (!options.removeMultiplePrefixes && index > 0) {
           return false;
         }
-        return meetsCleanupThreshold(match, options.cleanupThreshold)
+        return meetsCleanupScope(match, options.cleanupScope)
           || (index === 0 && expectedUnmarked);
       });
       if (removable.length === 0 || removable[0]?.from !== 0) {
@@ -163,7 +159,9 @@ export function planHeadingTransform(
           ? "remove-multiple-prefixes"
           : expectedUnmarked ? "remove-computed-unmarked" : last.ruleId,
         confidence: expectedUnmarked ? "high" : last.confidence,
-        provenance: first.provenance === "plugin" ? "plugin" : "manual",
+        provenance: first.provenance === "plugin"
+          ? "plugin"
+          : first.provenance === "template" ? "template" : "manual",
       });
       continue;
     }
@@ -174,7 +172,7 @@ export function planHeadingTransform(
     const insert = replacementPrefix(item.label, options.writeMarkers);
 
     if (first == null) {
-      if (malformedMarker || isSuspiciousNumericPrefix(content)) {
+      if (analysis.suspicious) {
         warnings.push({
           line: heading.line,
           heading: content,
@@ -235,7 +233,7 @@ export function planHeadingTransform(
     if (
       operation === "renumber"
       && options.normalizeManualOnRenumber
-      && meetsCleanupThreshold(first, "high")
+      && (first.provenance === "template" || first.confidence === "high")
     ) {
       if (content.slice(0, first.to) === insert) {
         continue;
@@ -250,7 +248,7 @@ export function planHeadingTransform(
         after: previewAfter(content, 0, first.to, insert),
         ruleId: "normalize-manual-number",
         confidence: first.confidence,
-        provenance: "manual",
+        provenance: first.provenance === "template" ? "template" : "manual",
       });
       continue;
     }

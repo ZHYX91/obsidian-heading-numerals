@@ -2,18 +2,18 @@ export const DISPLAY_MODES = ["normal", "show", "conceal"] as const;
 export type DisplayMode = (typeof DISPLAY_MODES)[number];
 export type NoteDisplayMode = DisplayMode | "inherit" | "off";
 
-export const SCHEME_IDS = [
+export const BUILT_IN_SCHEME_IDS = [
   "hierarchical",
   "hierarchical-h2",
   "chinese-official",
   "legal",
-  "custom",
 ] as const;
-export type SchemeId = (typeof SCHEME_IDS)[number];
+export type BuiltInSchemeId = (typeof BUILT_IN_SCHEME_IDS)[number];
+export type SchemeId = string;
 
 export const CONFIDENCES = ["low", "medium", "high", "certain"] as const;
 export type Confidence = (typeof CONFIDENCES)[number];
-export type CleanupThreshold = "plugin" | "high" | "medium";
+export type CleanupScope = "plugin" | "templates" | "common";
 export type MissingLevelStrategy = "fill-one" | "current-only" | "skip";
 export type NumberStyle =
   | "hierarchical"
@@ -57,20 +57,40 @@ export interface HeadingNumberMatch {
   to: number;
   style: NumberStyle;
   confidence: Confidence;
-  provenance: "plugin" | "manual" | "unknown";
+  provenance: "plugin" | "template" | "manual" | "unknown";
   ruleId: string;
+  schemeId?: string;
+  schemeRevision?: number;
 }
 
 export interface NumberingScheme {
-  id: SchemeId;
+  id: string;
   baseLevel: number;
   templates: readonly string[];
 }
 
+export interface CustomNumberingScheme extends NumberingScheme {
+  name: string;
+  revision: number;
+}
+
+export interface CleanupTemplateHistory {
+  schemeId: string;
+  schemeName: string;
+  revision: number;
+  baseLevel: number;
+  templates: readonly string[];
+}
+
+export interface CleanupTemplateSource {
+  schemeId: string;
+  schemeName: string;
+  revision: number;
+  templates: readonly string[];
+}
+
 export interface NumberingOptions {
-  scheme: SchemeId;
-  customTemplates: readonly string[];
-  customBaseLevel: number;
+  scheme: NumberingScheme;
   maxLevel: number;
   missingLevelStrategy: MissingLevelStrategy;
   starts: Readonly<Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>>;
@@ -95,7 +115,7 @@ export interface PlannedChange {
   after: string;
   ruleId: string;
   confidence: Confidence | null;
-  provenance: "plugin" | "manual" | "none";
+  provenance: "plugin" | "template" | "manual" | "none";
 }
 
 export interface PlanWarning {

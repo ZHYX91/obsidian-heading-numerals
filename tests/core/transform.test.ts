@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import { WORD_JOINER } from "../../src/core/markers";
+import { BUILT_IN_SCHEMES } from "../../src/core/schemes";
 import { planHeadingTransform, type TransformOptions } from "../../src/core/transform";
 
 function options(overrides: Partial<TransformOptions> = {}): TransformOptions {
   return {
     numbering: {
-      scheme: "hierarchical",
-      customTemplates: [],
-      customBaseLevel: 1,
+      scheme: BUILT_IN_SCHEMES.hierarchical,
       maxLevel: 6,
       missingLevelStrategy: "fill-one",
       starts: {},
     },
     writeMarkers: false,
-    cleanupThreshold: "high",
+    cleanupScope: "templates",
+    templateSources: [{
+      schemeId: "hierarchical",
+      schemeName: "Hierarchical",
+      revision: 1,
+      templates: BUILT_IN_SCHEMES.hierarchical.templates,
+    }],
     removeMultiplePrefixes: true,
     normalizeManualOnRenumber: true,
     ...overrides,
@@ -55,7 +60,7 @@ describe("heading transforms", () => {
       "# 2026. Annual",
       "# 1. Medium",
     ].join("\n");
-    const plan = planHeadingTransform(source, "remove", options());
+    const plan = planHeadingTransform(source, "remove", options({ cleanupScope: "common" }));
     expect(plan.result).toBe([
       "# Heading",
       "# Chained",
@@ -68,7 +73,7 @@ describe("heading transforms", () => {
 
   it("removes exact plugin numbers and can strip markers without deleting numbers", () => {
     const source = `# ${WORD_JOINER}1${WORD_JOINER} Heading`;
-    expect(planHeadingTransform(source, "remove", options({ cleanupThreshold: "plugin" })).result)
+    expect(planHeadingTransform(source, "remove", options({ cleanupScope: "plugin" })).result)
       .toBe("# Heading");
     expect(planHeadingTransform(source, "strip-markers", options()).result)
       .toBe("# 1 Heading");
@@ -79,8 +84,8 @@ describe("heading transforms", () => {
     const plan = planHeadingTransform(source, "remove", options());
     expect(plan.result).toBe("# First\n# Second");
     expect(plan.changes.map((change) => change.ruleId)).toEqual([
-      "remove-computed-unmarked",
-      "remove-computed-unmarked",
+      "template:hierarchical@1",
+      "template:hierarchical@1",
     ]);
   });
 
@@ -96,9 +101,20 @@ describe("heading transforms", () => {
     const cleaned = planHeadingTransform(
       marked.result,
       "remove",
-      options({ writeMarkers: true, cleanupThreshold: "plugin" }),
+      options({ writeMarkers: true, cleanupScope: "plugin" }),
     );
     expect(cleaned.result).toBe(source);
+  });
+
+  it("removes prefixes from active and historical templates without broad manual cleanup", () => {
+    const templateSources = [
+      { schemeId: "custom", schemeName: "Custom", revision: 2, templates: ["Part {1.arabic}"] },
+      { schemeId: "custom", schemeName: "Custom", revision: 1, templates: ["Old {1.roman_upper}"] },
+    ];
+    const configured = options({ cleanupScope: "templates", templateSources });
+    expect(planHeadingTransform("# Part 3 Current\n# Old IV Historical", "remove", configured).result)
+      .toBe("# Current\n# Historical");
+    expect(planHeadingTransform("# 1.1 Manual", "remove", configured).result).toBe("# 1.1 Manual");
   });
 
   it("never throws for deterministic arbitrary text", () => {

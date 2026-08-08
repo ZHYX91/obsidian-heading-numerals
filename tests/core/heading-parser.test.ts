@@ -50,4 +50,12 @@ describe("parseAtxHeadings", () => {
     expect(parseAtxHeadings("---\ntitle: broken\n# Hidden")).toEqual([]);
     expect(parseAtxHeadings("```\n# Hidden")).toEqual([]);
   });
+
+  it("skips Obsidian percent comments", () => {
+    const source = "%%\n# Hidden\n%%\n# Visible\n%% # Inline hidden %%\n## Also visible";
+    expect(parseAtxHeadings(source).map((heading) => heading.content)).toEqual([
+      "Visible",
+      "Also visible",
+    ]);
+  });
 });

@@ -1,24 +1,30 @@
 import {
   CONFIDENCES,
   DISPLAY_MODES,
-  SCHEME_IDS,
-  type CleanupThreshold,
+  type CleanupScope,
+  type CleanupTemplateHistory,
+  type CleanupTemplateSource,
+  type CustomNumberingScheme,
   type DisplayMode,
   type MissingLevelStrategy,
   type NumberingOptions,
   type SchemeId,
 } from "../core/types";
+import { compileTemplate } from "../core/template-compiler";
+import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
 export interface HeadingNumeralsSettings {
+  schemaVersion: 2;
   language: "auto" | "en" | "zh";
   displayMode: DisplayMode;
-  scheme: SchemeId;
-  customTemplates: string[];
-  customBaseLevel: number;
+  selectedSchemeId: string;
+  customSchemes: CustomNumberingScheme[];
+  hiddenBuiltInSchemeIds: string[];
+  cleanupHistory: CleanupTemplateHistory[];
   maxLevel: number;
   missingLevelStrategy: MissingLevelStrategy;
   writeMarkers: boolean;
-  cleanupThreshold: CleanupThreshold;
+  cleanupScope: CleanupScope;
   removeMultiplePrefixes: boolean;
   normalizeManualOnRenumber: boolean;
   revealOnActiveLine: boolean;
@@ -34,7 +40,11 @@ export interface HeadingNumeralsSettings {
 export interface BatchFileSnapshot {
   path: string;
   before: string;
-  after: string;
+  afterHash: string;
+  /** 0.1 recovery compatibility; never written by 0.2+. */
+  legacyAfter?: string;
+  /** Raw 0.1 field accepted only while sanitizing. */
+  after?: string;
 }
 
 export interface LastBatchSnapshot {
@@ -59,15 +69,17 @@ export const DEFAULT_CUSTOM_TEMPLATES = [
 ];
 
 export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
+  schemaVersion: 2,
   language: "auto",
   displayMode: "normal",
-  scheme: "hierarchical-h2",
-  customTemplates: [...DEFAULT_CUSTOM_TEMPLATES],
-  customBaseLevel: 1,
+  selectedSchemeId: "hierarchical-h2",
+  customSchemes: [],
+  hiddenBuiltInSchemeIds: [],
+  cleanupHistory: [],
   maxLevel: 6,
   missingLevelStrategy: "fill-one",
   writeMarkers: false,
-  cleanupThreshold: "high",
+  cleanupScope: "templates",
   removeMultiplePrefixes: true,
   normalizeManualOnRenumber: true,
   revealOnActiveLine: true,
@@ -100,17 +112,92 @@ function boundedNumber(value: unknown, fallback: number, minimum: number, maximu
     : fallback;
 }
 
+function templates(value: unknown, fallback: readonly string[]): string[] {
+  const source: readonly unknown[] = Array.isArray(value) ? value as unknown[] : fallback;
+  return Array.from({ length: 6 }, (_unused, index) => {
+    const template = source[index];
+    return typeof template === "string" ? template.slice(0, 300) : fallback[index] ?? "";
+  });
+}
+
+function validCustomId(value: unknown): value is string {
+  return typeof value === "string"
+    && /^custom-[a-z0-9][a-z0-9-]{0,55}$/u.test(value)
+    && !isBuiltInSchemeId(value);
+}
+
+function sanitizeCustomSchemes(value: unknown): CustomNumberingScheme[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const output: CustomNumberingScheme[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || !validCustomId(item.id) || seen.has(item.id)) continue;
+    const nextTemplates = templates(item.templates, DEFAULT_CUSTOM_TEMPLATES);
+    if (nextTemplates.some((template) => compileTemplate(template).diagnostics.length > 0)) continue;
+    seen.add(item.id);
+    output.push({
+      id: item.id,
+      name: typeof item.name === "string" && item.name.trim().length > 0
+        ? item.name.trim().slice(0, 80)
+        : "Custom scheme",
+      revision: Math.max(1, Math.trunc(boundedNumber(item.revision, 1, 1, Number.MAX_SAFE_INTEGER))),
+      baseLevel: Math.trunc(boundedNumber(item.baseLevel, 1, 1, 6)),
+      templates: nextTemplates,
+    });
+  }
+  return output;
+}
+
+function sanitizeCleanupHistory(value: unknown): CleanupTemplateHistory[] {
+  if (!Array.isArray(value)) return [];
+  const output: CleanupTemplateHistory[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.schemeId !== "string") continue;
+    const revision = Math.max(1, Math.trunc(boundedNumber(item.revision, 1, 1, Number.MAX_SAFE_INTEGER)));
+    const key = `${item.schemeId}@${revision}`;
+    if (seen.has(key)) continue;
+    const nextTemplates = templates(item.templates, []);
+    if (nextTemplates.every((template) => template.length === 0)) continue;
+    seen.add(key);
+    output.push({
+      schemeId: item.schemeId.slice(0, 64),
+      schemeName: typeof item.schemeName === "string" ? item.schemeName.slice(0, 80) : item.schemeId,
+      revision,
+      baseLevel: Math.trunc(boundedNumber(item.baseLevel, 1, 1, 6)),
+      templates: nextTemplates,
+    });
+  }
+  return output.slice(-100);
+}
+
 export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
   const raw = isRecord(value) ? value : {};
-  const rawTemplates: unknown[] | null = Array.isArray(raw.customTemplates)
-    ? raw.customTemplates as unknown[]
-    : null;
-  const templates = rawTemplates != null
-    ? Array.from({ length: 6 }, (_unused, index) => {
-      const template = rawTemplates[index];
-      return typeof template === "string" ? template.slice(0, 300) : DEFAULT_CUSTOM_TEMPLATES[index] ?? "";
-    })
-    : [...DEFAULT_CUSTOM_TEMPLATES];
+  const customSchemes = sanitizeCustomSchemes(raw.customSchemes);
+  const legacyTemplates = templates(raw.customTemplates, DEFAULT_CUSTOM_TEMPLATES);
+  const legacyUsesCustom = raw.scheme === "custom";
+  const legacyChanged = legacyTemplates.some((template, index) => template !== DEFAULT_CUSTOM_TEMPLATES[index]);
+  if (customSchemes.length === 0 && (legacyUsesCustom || legacyChanged)) {
+    customSchemes.push({
+      id: "custom-migrated",
+      name: "Migrated custom scheme",
+      revision: 1,
+      baseLevel: Math.trunc(boundedNumber(raw.customBaseLevel, 1, 1, 6)),
+      templates: legacyTemplates,
+    });
+  }
+  const requestedScheme = typeof raw.selectedSchemeId === "string"
+    ? raw.selectedSchemeId
+    : legacyUsesCustom ? "custom-migrated" : typeof raw.scheme === "string" ? raw.scheme : "hierarchical-h2";
+  const selectedSchemeId = isBuiltInSchemeId(requestedScheme)
+    || customSchemes.some((scheme) => scheme.id === requestedScheme)
+    ? requestedScheme
+    : DEFAULT_SETTINGS.selectedSchemeId;
+  const hiddenBuiltInSchemeIds = Array.isArray(raw.hiddenBuiltInSchemeIds)
+    ? raw.hiddenBuiltInSchemeIds
+      .filter((id): id is string => typeof id === "string" && isBuiltInSchemeId(id))
+      .filter((id, index, all) => all.indexOf(id) === index && id !== selectedSchemeId)
+    : [];
   const excludedFolders = Array.isArray(raw.excludedFolders)
     ? raw.excludedFolders
       .filter((entry): entry is string => typeof entry === "string")
@@ -119,11 +206,13 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
     : [];
 
   return {
+    schemaVersion: 2,
     language: oneOf(raw.language, ["auto", "en", "zh"] as const, DEFAULT_SETTINGS.language),
     displayMode: oneOf(raw.displayMode, DISPLAY_MODES, DEFAULT_SETTINGS.displayMode),
-    scheme: oneOf(raw.scheme, SCHEME_IDS, DEFAULT_SETTINGS.scheme),
-    customTemplates: templates,
-    customBaseLevel: Math.trunc(boundedNumber(raw.customBaseLevel, DEFAULT_SETTINGS.customBaseLevel, 1, 6)),
+    selectedSchemeId,
+    customSchemes,
+    hiddenBuiltInSchemeIds,
+    cleanupHistory: sanitizeCleanupHistory(raw.cleanupHistory),
     maxLevel: Math.trunc(boundedNumber(raw.maxLevel, DEFAULT_SETTINGS.maxLevel, 1, 6)),
     missingLevelStrategy: oneOf(
       raw.missingLevelStrategy,
@@ -131,11 +220,9 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
       DEFAULT_SETTINGS.missingLevelStrategy,
     ),
     writeMarkers: booleanOr(raw.writeMarkers, DEFAULT_SETTINGS.writeMarkers),
-    cleanupThreshold: oneOf(
-      raw.cleanupThreshold,
-      ["plugin", "high", "medium"] as const,
-      DEFAULT_SETTINGS.cleanupThreshold,
-    ),
+    cleanupScope: oneOf(raw.cleanupScope, ["plugin", "templates", "common"] as const,
+      raw.cleanupThreshold === "plugin" ? "plugin"
+        : raw.cleanupThreshold === "medium" ? "common" : DEFAULT_SETTINGS.cleanupScope),
     removeMultiplePrefixes: booleanOr(raw.removeMultiplePrefixes, DEFAULT_SETTINGS.removeMultiplePrefixes),
     normalizeManualOnRenumber: booleanOr(
       raw.normalizeManualOnRenumber,
@@ -161,10 +248,10 @@ function isBatchFile(value: unknown): value is BatchFileSnapshot {
   return isRecord(value)
     && typeof value.path === "string"
     && typeof value.before === "string"
-    && typeof value.after === "string";
+    && (typeof value.afterHash === "string" || typeof value.after === "string");
 }
 
-function sanitizeLastBatch(value: unknown): LastBatchSnapshot | null {
+export function sanitizeLastBatch(value: unknown): LastBatchSnapshot | null {
   if (!isRecord(value) || !Array.isArray(value.files) || !value.files.every(isBatchFile)) {
     return null;
   }
@@ -179,7 +266,12 @@ function sanitizeLastBatch(value: unknown): LastBatchSnapshot | null {
     createdAt: value.createdAt,
     operation: value.operation as LastBatchSnapshot["operation"],
     status: value.status as LastBatchSnapshot["status"],
-    files: value.files.map((file) => ({ ...file })),
+    files: value.files.map((file) => ({
+      path: file.path,
+      before: file.before,
+      afterHash: typeof file.afterHash === "string" ? file.afterHash : "legacy-exact",
+      ...(typeof file.after === "string" ? { legacyAfter: file.after } : {}),
+    })),
   };
 }
 
@@ -194,23 +286,62 @@ export function sanitizePluginData(value: unknown): PersistedPluginData {
   };
 }
 
+export function cloneSettings(settings: HeadingNumeralsSettings): HeadingNumeralsSettings {
+  return {
+    ...settings,
+    customSchemes: settings.customSchemes.map((scheme) => ({
+      ...scheme,
+      templates: [...scheme.templates],
+    })),
+    hiddenBuiltInSchemeIds: [...settings.hiddenBuiltInSchemeIds],
+    cleanupHistory: settings.cleanupHistory.map((entry) => ({
+      ...entry,
+      templates: [...entry.templates],
+    })),
+    excludedFolders: [...settings.excludedFolders],
+  };
+}
+
 export function toNumberingOptions(
   settings: HeadingNumeralsSettings,
   overrides: Readonly<{
-    scheme?: SchemeId;
+    schemeId?: SchemeId;
     starts?: Readonly<Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>>;
   }> = {},
 ): NumberingOptions {
   return {
-    scheme: overrides.scheme ?? settings.scheme,
-    customTemplates: settings.customTemplates,
-    customBaseLevel: settings.customBaseLevel,
+    scheme: resolveScheme(overrides.schemeId ?? settings.selectedSchemeId, settings.customSchemes),
     maxLevel: settings.maxLevel,
     missingLevelStrategy: settings.missingLevelStrategy,
     starts: overrides.starts ?? {},
   };
 }
 
-export function isKnownConfidence(value: unknown): value is CleanupThreshold {
-  return value === "plugin" || (typeof value === "string" && CONFIDENCES.includes(value as never) && value !== "low" && value !== "certain");
+export function cleanupTemplateSources(settings: HeadingNumeralsSettings): CleanupTemplateSource[] {
+  const sources: CleanupTemplateSource[] = Object.values(BUILT_IN_SCHEMES).map((scheme) => ({
+    schemeId: scheme.id,
+    schemeName: scheme.id,
+    revision: 1,
+    templates: scheme.templates,
+  }));
+  for (const scheme of settings.customSchemes) {
+    sources.push({
+      schemeId: scheme.id,
+      schemeName: scheme.name,
+      revision: scheme.revision,
+      templates: scheme.templates,
+    });
+  }
+  sources.push(...settings.cleanupHistory);
+  const seen = new Set<string>();
+  return sources.filter((source) => {
+    const key = `${source.schemeId}@${source.revision}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function isKnownConfidence(value: unknown): boolean {
+  return value === "plugin" || (typeof value === "string" && CONFIDENCES.includes(value as never));
 }

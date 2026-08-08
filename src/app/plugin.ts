@@ -6,15 +6,22 @@ import {
   type TFile,
 } from "obsidian";
 
+import { RecoveryStore } from "../adapters/obsidian/recovery-store";
 import { BatchController } from "../commands/batch";
 import { runCurrentNoteOperation } from "../commands/current-note";
 import { createTranslator, type Translate } from "../config/i18n";
 import {
   DEFAULT_SETTINGS,
+  cloneSettings,
   sanitizePluginData,
+  sanitizeSettings,
   type HeadingNumeralsSettings,
   type LastBatchSnapshot,
 } from "../config/settings";
+import {
+  SettingsSaveCoordinator,
+  type SettingsSaveStatus,
+} from "../config/settings-save-coordinator";
 import type { DisplayMode, TransformOperation } from "../core/types";
 import { HeadingDisplayController } from "../editor/heading-display-extension";
 import { HeadingReadingProcessor } from "../reading/heading-postprocessor";
@@ -25,16 +32,30 @@ export default class HeadingNumeralsPlugin extends Plugin {
   private lastBatch: LastBatchSnapshot | null = null;
   private displayController: HeadingDisplayController | null = null;
   private batchController: BatchController | null = null;
+  private recoveryStore: RecoveryStore | null = null;
+  private settingsCoordinator: SettingsSaveCoordinator<HeadingNumeralsSettings> | null = null;
+  private readingProcessor: HeadingReadingProcessor | null = null;
 
   override async onload(): Promise<void> {
     const data = sanitizePluginData(await this.loadData());
     this.settings = data.settings;
-    this.lastBatch = data.lastBatch;
+    this.recoveryStore = new RecoveryStore(this.app, this.manifest);
+    const recoveredBatch = await this.recoveryStore.load();
+    this.lastBatch = recoveredBatch ?? data.lastBatch;
+    if (data.lastBatch != null && recoveredBatch == null) {
+      await this.recoveryStore.save(data.lastBatch);
+    }
+    this.settingsCoordinator = new SettingsSaveCoordinator(async (snapshot) => {
+      await this.saveData({ schemaVersion: 2, settings: snapshot });
+    });
+    await this.settingsCoordinator.save(cloneSettings(this.settings)).catch((error: unknown) => {
+      console.error("Heading Numerals: initial settings migration remains pending", error);
+    });
 
     this.displayController = new HeadingDisplayController(() => this.settings);
     this.registerEditorExtension(this.displayController.createExtension());
-    const readingProcessor = new HeadingReadingProcessor(this.app, () => this.settings);
-    this.registerMarkdownPostProcessor((element, context) => readingProcessor.process(element, context));
+    this.readingProcessor = new HeadingReadingProcessor(this.app, () => this.settings);
+    this.registerMarkdownPostProcessor((element, context) => this.readingProcessor?.process(element, context));
 
     this.batchController = new BatchController(
       this.app,
@@ -42,8 +63,9 @@ export default class HeadingNumeralsPlugin extends Plugin {
       {
         getLastBatch: () => this.lastBatch,
         setLastBatch: async (snapshot) => {
+          if (this.recoveryStore == null) throw new Error("Recovery store is unavailable.");
+          await this.recoveryStore.save(snapshot);
           this.lastBatch = snapshot;
-          await this.persistData();
         },
       },
     );
@@ -55,19 +77,39 @@ export default class HeadingNumeralsPlugin extends Plugin {
   }
 
   override onunload(): void {
+    void this.settingsCoordinator?.flush().catch((error: unknown) => {
+      console.error("Heading Numerals: failed to flush settings", error);
+    });
     this.cleanupReadingDom();
     this.clearAppearance();
   }
 
-  async saveSettings(): Promise<void> {
-    await this.persistData();
-    this.applyAppearance();
-    this.displayController?.refreshAll();
-    this.rerenderReadingViews();
+  scheduleSettings(settings: HeadingNumeralsSettings, impact: SettingsImpact = "all"): void {
+    this.settings = sanitizeSettings(settings);
+    this.applySettingsImpact(impact);
+    this.settingsCoordinator?.schedule(cloneSettings(this.settings));
   }
 
-  private async persistData(): Promise<void> {
-    await this.saveData({ settings: this.settings, lastBatch: this.lastBatch });
+  async saveSettings(
+    settings: HeadingNumeralsSettings = this.settings,
+    impact: SettingsImpact = "all",
+  ): Promise<void> {
+    this.settings = sanitizeSettings(settings);
+    this.applySettingsImpact(impact);
+    if (this.settingsCoordinator == null) throw new Error("Settings coordinator is unavailable.");
+    await this.settingsCoordinator.save(cloneSettings(this.settings));
+  }
+
+  settingsSaveStatus(): SettingsSaveStatus {
+    return this.settingsCoordinator?.snapshot() ?? { state: "saved", error: null };
+  }
+
+  subscribeSettingsSaveStatus(listener: (status: SettingsSaveStatus) => void): () => void {
+    return this.settingsCoordinator?.subscribe(listener) ?? (() => undefined);
+  }
+
+  retrySettingsSave(): Promise<void> {
+    return this.settingsCoordinator?.retry() ?? Promise.resolve();
   }
 
   private translate(): Translate {
@@ -84,7 +126,9 @@ export default class HeadingNumeralsPlugin extends Plugin {
       this.addCommand({
         id: `set-view-mode-${mode}`,
         name: this.translate()(key),
-        callback: () => void this.setDisplayMode(mode),
+        callback: () => void this.setDisplayMode(mode).catch((error: unknown) => {
+          console.error("Heading Numerals: failed to save view mode", error);
+        }),
       });
     }
 
@@ -145,7 +189,9 @@ export default class HeadingNumeralsPlugin extends Plugin {
         menu.addItem((item) => item
           .setTitle(this.translate()(`mode.${mode}`))
           .setChecked(this.settings.displayMode === mode)
-          .onClick(() => void this.setDisplayMode(mode)));
+          .onClick(() => void this.setDisplayMode(mode).catch((error: unknown) => {
+            console.error("Heading Numerals: failed to save view mode", error);
+          })));
       }
       menu.addSeparator();
       for (const operation of ["write", "remove", "renumber", "strip-markers"] as const) {
@@ -169,8 +215,9 @@ export default class HeadingNumeralsPlugin extends Plugin {
   }
 
   private async setDisplayMode(mode: DisplayMode): Promise<void> {
-    this.settings.displayMode = mode;
-    await this.saveSettings();
+    const next = cloneSettings(this.settings);
+    next.displayMode = mode;
+    await this.saveSettings(next, "display");
     new Notice(this.translate()("notice.mode", { mode: this.translate()(`mode.${mode}`) }));
   }
 
@@ -204,6 +251,15 @@ export default class HeadingNumeralsPlugin extends Plugin {
         leaf.view.previewMode.rerender(true);
       }
     });
+  }
+
+  private applySettingsImpact(impact: SettingsImpact): void {
+    if (impact === "appearance" || impact === "all") this.applyAppearance();
+    if (impact === "display" || impact === "all") {
+      this.readingProcessor?.invalidate();
+      this.displayController?.refreshAll();
+      this.rerenderReadingViews();
+    }
   }
 
   private ownerDocuments(): Document[] {
@@ -252,3 +308,5 @@ export default class HeadingNumeralsPlugin extends Plugin {
     }
   }
 }
+
+export type SettingsImpact = "none" | "appearance" | "display" | "all";

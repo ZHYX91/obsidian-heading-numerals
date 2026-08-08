@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { WORD_JOINER } from "../../src/core/markers";
 import {
   isSuspiciousNumericPrefix,
-  meetsCleanupThreshold,
+  meetsCleanupScope,
   parseHeadingNumber,
   parseHeadingNumberPrefixes,
 } from "../../src/core/number-parser";
@@ -61,15 +61,16 @@ describe("number parser", () => {
     expect(matches[1]?.ruleId).toBe("manual-arabic-chained");
   });
 
-  it("applies cleanup thresholds conservatively", () => {
+  it("applies cleanup scopes conservatively", () => {
     const plugin = parseHeadingNumber(`${WORD_JOINER}1${WORD_JOINER} A`);
     const manual = parseHeadingNumber("1.1 A");
     const medium = parseHeadingNumber("1. A");
-    expect(plugin && meetsCleanupThreshold(plugin, "plugin")).toBe(true);
-    expect(manual && meetsCleanupThreshold(manual, "plugin")).toBe(false);
-    expect(manual && meetsCleanupThreshold(manual, "high")).toBe(true);
-    expect(medium && meetsCleanupThreshold(medium, "high")).toBe(false);
-    expect(medium && meetsCleanupThreshold(medium, "medium")).toBe(true);
+    expect(plugin && meetsCleanupScope(plugin, "plugin")).toBe(true);
+    expect(manual && meetsCleanupScope(manual, "plugin")).toBe(false);
+    expect(manual && meetsCleanupScope(manual, "templates")).toBe(false);
+    expect(manual && meetsCleanupScope(manual, "common")).toBe(true);
+    expect(medium && meetsCleanupScope(medium, "templates")).toBe(false);
+    expect(medium && meetsCleanupScope(medium, "common")).toBe(true);
   });
 
   it("recognizes bare Arabic prefixes without elevating them by default", () => {

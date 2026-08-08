@@ -1,4 +1,4 @@
-import { createScheme, renderCurrentLevel, renderTemplate } from "./schemes";
+import { renderCurrentLevel, renderTemplate } from "./schemes";
 import type {
   Counters,
   NumberedHeading,
@@ -20,7 +20,7 @@ export function numberHeadings(
   headings: readonly ParsedHeading[],
   options: NumberingOptions,
 ): NumberedHeading[] {
-  const scheme = createScheme(options.scheme, options.customTemplates, options.customBaseLevel);
+  const scheme = options.scheme;
   const maxLevel = Math.min(6, Math.max(scheme.baseLevel, Math.trunc(options.maxLevel)));
   const starts = Array.from({ length: 6 }, (_unused, index) => normalizedStart(options, index + 1));
   const counters = starts.map((start) => start - 1) as Counters;

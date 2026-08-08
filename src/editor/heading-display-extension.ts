@@ -16,10 +16,14 @@ import {
 } from "obsidian";
 
 import { parseNoteOverrides, resolveNoteSettings, type NoteOverrides } from "../config/frontmatter";
-import { toNumberingOptions, type HeadingNumeralsSettings } from "../config/settings";
+import {
+  cleanupTemplateSources,
+  toNumberingOptions,
+  type HeadingNumeralsSettings,
+} from "../config/settings";
 import { parseAtxHeadings } from "../core/heading-parser";
 import type { ParsedHeading } from "../core/types";
-import { createDisplayPlan } from "./display-plan";
+import { createDisplayPlan } from "../application/display-plan";
 
 export const refreshHeadingDisplay = StateEffect.define<void>();
 
@@ -52,7 +56,7 @@ function syntaxConfirmsHeading(state: EditorState, heading: ParsedHeading): bool
     1,
   );
   for (let depth = 0; node != null && depth < 8; depth += 1) {
-    if (/header|heading/iu.test(node.name)) {
+    if (/^(?:ATXHeading[1-6]?|HeaderMark|HyperMD-header(?:_H[1-6])?)$/u.test(node.name)) {
       return true;
     }
     node = node.parent;
@@ -140,10 +144,11 @@ export class HeadingDisplayController {
         const plan = createDisplayPlan(headings, {
           mode: effective.displayMode,
           numbering: toNumberingOptions(settings, {
-            scheme: effective.scheme,
+            schemeId: effective.schemeId,
             starts: effective.starts,
           }),
-          cleanupThreshold: effective.cleanupThreshold,
+          cleanupScope: effective.cleanupScope,
+          templateSources: cleanupTemplateSources(settings),
           revealOnActiveLine: settings.revealOnActiveLine,
           selections,
           composing: this.view.composing,

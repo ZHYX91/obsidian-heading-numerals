@@ -1,27 +1,28 @@
 import type { HeadingNumeralsSettings } from "./settings";
-import { DISPLAY_MODES, SCHEME_IDS, type CleanupThreshold, type DisplayMode, type SchemeId } from "../core/types";
+import { DISPLAY_MODES, type CleanupScope, type DisplayMode } from "../core/types";
+import { isBuiltInSchemeId } from "../core/schemes";
 
 export interface NoteOverrides {
   disabled: boolean;
   displayMode: DisplayMode | null;
-  scheme: SchemeId | null;
-  cleanupThreshold: CleanupThreshold | null;
+  schemeId: string | null;
+  cleanupScope: CleanupScope | null;
   starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>;
 }
 
 export interface EffectiveNoteSettings {
   disabled: boolean;
   displayMode: DisplayMode;
-  scheme: SchemeId;
-  cleanupThreshold: CleanupThreshold;
+  schemeId: string;
+  cleanupScope: CleanupScope;
   starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>;
 }
 
 const EMPTY_OVERRIDES: NoteOverrides = {
   disabled: false,
   displayMode: null,
-  scheme: null,
-  cleanupThreshold: null,
+  schemeId: null,
+  cleanupScope: null,
   starts: {},
 };
 
@@ -48,13 +49,16 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
     ? modeValue as DisplayMode
     : null;
   const schemeValue = data["heading-numerals-scheme"];
-  const scheme = typeof schemeValue === "string" && SCHEME_IDS.includes(schemeValue as SchemeId)
-    ? schemeValue as SchemeId
+  const schemeId = typeof schemeValue === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/u.test(schemeValue)
+    ? schemeValue
     : null;
+  const scopeValue = data["heading-numerals-clean-scope"];
   const confidenceValue = data["heading-numerals-clean-confidence"];
-  const cleanupThreshold = confidenceValue === "plugin" || confidenceValue === "high" || confidenceValue === "medium"
-    ? confidenceValue
-    : null;
+  const cleanupScope = scopeValue === "plugin" || scopeValue === "templates" || scopeValue === "common"
+    ? scopeValue
+    : confidenceValue === "plugin" ? "plugin"
+      : confidenceValue === "medium" ? "common"
+        : confidenceValue === "high" ? "templates" : null;
   const startsData = record(data["heading-numerals-start"]);
   const starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>> = {};
   if (startsData != null) {
@@ -65,18 +69,23 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
       }
     }
   }
-  return { disabled: ignore, displayMode, scheme, cleanupThreshold, starts };
+  return { disabled: ignore, displayMode, schemeId, cleanupScope, starts };
 }
 
 export function resolveNoteSettings(
   settings: HeadingNumeralsSettings,
   overrides: NoteOverrides,
 ): EffectiveNoteSettings {
+  const requestedScheme = overrides.schemeId;
+  const schemeExists = requestedScheme != null && (
+    isBuiltInSchemeId(requestedScheme)
+    || settings.customSchemes.some((scheme) => scheme.id === requestedScheme)
+  );
   return {
     disabled: overrides.disabled,
     displayMode: overrides.displayMode ?? settings.displayMode,
-    scheme: overrides.scheme ?? settings.scheme,
-    cleanupThreshold: overrides.cleanupThreshold ?? settings.cleanupThreshold,
+    schemeId: schemeExists && requestedScheme != null ? requestedScheme : settings.selectedSchemeId,
+    cleanupScope: overrides.cleanupScope ?? settings.cleanupScope,
     starts: { ...overrides.starts },
   };
 }

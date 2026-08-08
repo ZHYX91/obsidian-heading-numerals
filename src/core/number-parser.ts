@@ -1,10 +1,12 @@
 import { hasMalformedPluginMarker, WORD_JOINER } from "./markers";
 import type {
-  CleanupThreshold,
+  CleanupScope,
+  CleanupTemplateSource,
   Confidence,
   HeadingNumberMatch,
   NumberStyle,
 } from "./types";
+import { templatePrefixPattern } from "./template-compiler";
 
 const CONFIDENCE_RANK: Readonly<Record<Confidence, number>> = {
   low: 0,
@@ -149,6 +151,35 @@ function makeCandidateMatch(text: string, candidate: Candidate): HeadingNumberMa
   };
 }
 
+function parseTemplatePrefix(
+  text: string,
+  headingLevel: number,
+  sources: readonly CleanupTemplateSource[],
+): HeadingNumberMatch | null {
+  for (const source of sources) {
+    const template = source.templates[headingLevel - 1];
+    if (template == null || template.length === 0) continue;
+    const pattern = templatePrefixPattern(template);
+    const match = pattern?.exec(text);
+    if (match == null || match[0].length === 0 || !meaningfulRemainder(text, match[0].length)) continue;
+    const core = match[1] ?? match[0].trimEnd();
+    return {
+      fullPrefix: match[0],
+      numberCore: core,
+      separator: match[2] ?? "",
+      from: 0,
+      to: match[0].length,
+      style: inferStyle(core),
+      confidence: "high",
+      provenance: "template",
+      ruleId: `template:${source.schemeId}@${source.revision}`,
+      schemeId: source.schemeId,
+      schemeRevision: source.revision,
+    };
+  }
+  return null;
+}
+
 function parseManualPrefix(text: string): HeadingNumberMatch | null {
   const legal = candidateFromRegex(
     text,
@@ -252,7 +283,15 @@ function parseManualPrefix(text: string): HeadingNumberMatch | null {
   return letter == null ? null : makeCandidateMatch(text, letter);
 }
 
-export function parseHeadingNumber(text: string): HeadingNumberMatch | null {
+export interface HeadingNumberContext {
+  readonly headingLevel: number;
+  readonly templateSources: readonly CleanupTemplateSource[];
+}
+
+export function parseHeadingNumber(
+  text: string,
+  context?: HeadingNumberContext,
+): HeadingNumberMatch | null {
   const plugin = parsePluginPrefix(text);
   if (plugin != null) {
     return plugin;
@@ -260,14 +299,22 @@ export function parseHeadingNumber(text: string): HeadingNumberMatch | null {
   if (hasMalformedPluginMarker(text)) {
     return null;
   }
+  if (context != null) {
+    const template = parseTemplatePrefix(text, context.headingLevel, context.templateSources);
+    if (template != null) return template;
+  }
   return parseManualPrefix(text);
 }
 
-export function parseHeadingNumberPrefixes(text: string, maxPrefixes = 8): HeadingNumberMatch[] {
+export function parseHeadingNumberPrefixes(
+  text: string,
+  maxPrefixes = 8,
+  context?: HeadingNumberContext,
+): HeadingNumberMatch[] {
   const matches: HeadingNumberMatch[] = [];
   let offset = 0;
   while (offset < text.length && matches.length < maxPrefixes) {
-    const match = parseHeadingNumber(text.slice(offset));
+    const match = parseHeadingNumber(text.slice(offset), context);
     if (match == null || match.to <= 0) {
       break;
     }
@@ -286,14 +333,14 @@ export function parseHeadingNumberPrefixes(text: string, maxPrefixes = 8): Headi
   return matches;
 }
 
-export function meetsCleanupThreshold(
+export function meetsCleanupScope(
   match: HeadingNumberMatch,
-  threshold: CleanupThreshold,
+  scope: CleanupScope,
 ): boolean {
-  if (threshold === "plugin") {
-    return match.provenance === "plugin";
-  }
-  return CONFIDENCE_RANK[match.confidence] >= CONFIDENCE_RANK[threshold];
+  if (match.provenance === "plugin") return true;
+  if (scope === "plugin") return false;
+  if (match.provenance === "template") return true;
+  return scope === "common" && CONFIDENCE_RANK[match.confidence] >= CONFIDENCE_RANK.medium;
 }
 
 export function isSuspiciousNumericPrefix(text: string): boolean {

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TFile, type App, type MarkdownPostProcessorContext } from "obsidian";
 
@@ -10,7 +10,10 @@ import { HeadingReadingProcessor } from "../../src/reading/heading-postprocessor
 function settings(overrides: Partial<HeadingNumeralsSettings>): HeadingNumeralsSettings {
   return {
     ...DEFAULT_SETTINGS,
-    customTemplates: [...DEFAULT_SETTINGS.customTemplates],
+    customSchemes: DEFAULT_SETTINGS.customSchemes.map((scheme) => ({
+      ...scheme,
+      templates: [...scheme.templates],
+    })),
     excludedFolders: [],
     ...overrides,
   };
@@ -19,10 +22,11 @@ function settings(overrides: Partial<HeadingNumeralsSettings>): HeadingNumeralsS
 function harness(source: string, configured: HeadingNumeralsSettings) {
   const FileConstructor = TFile as unknown as new (path: string) => TFile;
   const file = new FileConstructor("note.md");
+  const cachedRead = vi.fn(async () => source);
   const app = {
     vault: {
       getAbstractFileByPath: () => file,
-      cachedRead: async () => source,
+      cachedRead,
     },
   } as unknown as App;
   const processor = new HeadingReadingProcessor(app, () => configured);
@@ -33,7 +37,7 @@ function harness(source: string, configured: HeadingNumeralsSettings) {
   } as unknown as MarkdownPostProcessorContext;
   const container = document.createElement("div");
   document.body.appendChild(container);
-  return { processor, context, container };
+  return { processor, context, container, cachedRead };
 }
 
 afterEach(() => {
@@ -44,7 +48,7 @@ describe("HeadingReadingProcessor", () => {
   it("adds virtual numbers using the full document counter plan", async () => {
     const { processor, context, container } = harness(
       "# First\n## Second",
-      settings({ displayMode: "show", scheme: "hierarchical" }),
+      settings({ displayMode: "show", selectedSchemeId: "hierarchical" }),
     );
     container.append(document.createElement("h1"), document.createElement("h2"));
     container.children[0]!.textContent = "First";
@@ -60,7 +64,11 @@ describe("HeadingReadingProcessor", () => {
   it("conceals only the validated source prefix", async () => {
     const { processor, context, container } = harness(
       "# 1.1 Stored",
-      settings({ displayMode: "conceal", scheme: "hierarchical" }),
+      settings({
+        displayMode: "conceal",
+        selectedSchemeId: "hierarchical",
+        cleanupScope: "common",
+      }),
     );
     const heading = document.createElement("h1");
     heading.textContent = "1.1 Stored";
@@ -77,7 +85,7 @@ describe("HeadingReadingProcessor", () => {
   it("fails closed when rendered heading levels do not match source", async () => {
     const { processor, context, container } = harness(
       "# First",
-      settings({ displayMode: "show", scheme: "hierarchical" }),
+      settings({ displayMode: "show", selectedSchemeId: "hierarchical" }),
     );
     const wrongLevel = document.createElement("h2");
     wrongLevel.textContent = "First";
@@ -86,5 +94,18 @@ describe("HeadingReadingProcessor", () => {
     await processor.process(container, context);
 
     expect(container.querySelector(".heading-numerals-virtual")).toBeNull();
+  });
+
+  it("reuses one full-document plan across postprocessor calls", async () => {
+    const { processor, context, container, cachedRead } = harness(
+      "# First\n## Second",
+      settings({ displayMode: "show", selectedSchemeId: "hierarchical" }),
+    );
+    container.append(document.createElement("h1"), document.createElement("h2"));
+    container.children[0]!.textContent = "First";
+    container.children[1]!.textContent = "Second";
+    await processor.process(container, context);
+    await processor.process(container, context);
+    expect(cachedRead).toHaveBeenCalledTimes(1);
   });
 });

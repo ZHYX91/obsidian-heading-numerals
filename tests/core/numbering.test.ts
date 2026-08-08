@@ -2,14 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { parseAtxHeadings } from "../../src/core/heading-parser";
 import { numberHeadings } from "../../src/core/numbering-engine";
-import { formatCounter } from "../../src/core/schemes";
+import { BUILT_IN_SCHEMES, formatCounter } from "../../src/core/schemes";
 import type { NumberingOptions } from "../../src/core/types";
 
 function options(overrides: Partial<NumberingOptions> = {}): NumberingOptions {
   return {
-    scheme: "hierarchical",
-    customTemplates: [],
-    customBaseLevel: 1,
+    scheme: BUILT_IN_SCHEMES.hierarchical,
     maxLevel: 6,
     missingLevelStrategy: "fill-one",
     starts: {},
@@ -26,7 +24,7 @@ describe("numberHeadings", () => {
 
   it("supports H2 as the numbering root", () => {
     const source = "# Document\n## Part\n### Detail\n## Next";
-    const labels = numberHeadings(parseAtxHeadings(source), options({ scheme: "hierarchical-h2" }))
+    const labels = numberHeadings(parseAtxHeadings(source), options({ scheme: BUILT_IN_SCHEMES["hierarchical-h2"] }))
       .map((item) => item.label);
     expect(labels).toEqual([null, "1", "1.1", "2"]);
   });

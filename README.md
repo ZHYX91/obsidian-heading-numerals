@@ -9,7 +9,7 @@ Heading Numerals separates two decisions that Markdown tools often mix together:
 
 It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
 
-> Status: `0.1.0` development baseline. Automated checks are available; real Obsidian runtime acceptance is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). No Community Plugins release is claimed yet.
+> Current release: `0.2.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is still tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is not yet listed in Obsidian Community Plugins.
 
 ## 中文
 
@@ -26,7 +26,7 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 
 ### 安全设计
 
-- 只处理标准 ATX 标题（`#` 至 `######`），跳过 YAML、围栏代码块、HTML 注释/块、blockquote、列表和普通文本。
+- 只处理标准 ATX 标题（`#` 至 `######`），跳过 YAML、围栏代码块、HTML/Obsidian `%%` 注释与块、blockquote、列表和普通文本。
 - 默认不删除 `3.14`、`2.0`、`2026`、日期、单位数量等有歧义的数字文本。
 - 写入命令不会静默覆盖人工序号；重新编号只会在预览后规范化高置信度人工序号。
 - 当前笔记的全部变更通过一次 Editor transaction 应用，可单步撤销。
@@ -42,9 +42,19 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 - 层级数字（H2 起始）：H1 作为文档标题，H2 从 `1` 开始
 - 中文公文：`一、`、`（一）`、`1.`、`（1）`、`①`
 - 法律条文：`第一编`、`第一章`、`第一节`、`第一条`
-- 自定义模板：支持 `{1.arabic}`、`{2.chinese_lower}` 等文本占位符
+- 自定义方案：可添加多个、修改、删除；内置方案可展开查看并复制成自定义方案
 
-支持阿拉伯数字、全角数字、中文大小写数字、圆圈数字、英文字母和罗马数字格式。
+占位符写法是 `{标题层级.数字格式}`。例如 `{1.arabic}` 表示“把 H1 的计数显示为阿拉伯数字”，`{2.chinese_lower}` 表示“把 H2 的计数显示为中文小写数字”。设置页会直接列出并预览所有格式：
+
+| 数字格式 | 示例 |
+|---|---|
+| `arabic` / `arabic_full` | `1` / `１` |
+| `chinese_lower` / `chinese_upper` | `一` / `壹` |
+| `circled` | `①` |
+| `letter_upper` / `letter_lower` | `A` / `a` |
+| `roman_upper` / `roman_lower` | `I` / `i` |
+
+清理范围默认选择“当前及历史模板”：它会识别来源标记、全部内置方案、全部自定义方案以及自定义方案保存或删除前的历史版本。较宽的“常见人工序号”范围需要用户主动选择，并始终通过变更预览；人工输入的数字不会因为看起来相似就被静默删除。
 
 ### 命令
 
@@ -63,17 +73,17 @@ It can write, remove, virtually display, or visually conceal heading numbers wit
 ---
 heading-numerals: show
 heading-numerals-scheme: hierarchical-h2
-heading-numerals-clean-confidence: high
+heading-numerals-clean-scope: templates
 heading-numerals-start:
   h2: 3
 ---
 ```
 
-`heading-numerals` 可设为 `inherit`、`normal`、`show`、`conceal` 或 `off`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。
+`heading-numerals` 可设为 `inherit`、`normal`、`show`、`conceal` 或 `off`。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
 
 ### 安装与开发
 
-当前版本尚未发布到 Obsidian Community Plugins。开发安装：
+当前版本尚未加入 Obsidian Community Plugins。可以从 GitHub Release 手动安装，或开发安装：
 
 1. 运行 `npm ci && npm run build`。
 2. 将 `dist/main.js`、`dist/manifest.json`、`dist/styles.css` 复制到测试 Vault 的 `.obsidian/plugins/heading-numerals/`。
@@ -92,6 +102,7 @@ heading-numerals-start:
 - Renumber a note using the same engine as virtual display.
 - Process a folder or the whole vault with stale-content checks, a persisted recovery snapshot, and rollback.
 - Override view mode, scheme, cleanup confidence, and starting counters per note through Properties.
+- Add, edit, and delete multiple custom schemes while retaining retired template revisions for cleanup.
 - Use English or Simplified Chinese UI text.
 
 ### Safety and source control
@@ -102,11 +113,17 @@ Optional U+2060 source markers make plugin-written numbers exact to identify, bu
 
 Writing or removing numbers changes heading text. Existing links to headings may need manual repair; Heading Numerals does not rewrite links automatically.
 
+### Template placeholders and cleanup
+
+A placeholder uses `{heading-level.number-format}`. For example, `{1.arabic}` renders the H1 counter as `1`, while `{2.chinese_lower}` renders the H2 counter as `一`. The settings page lists every supported format with examples and exposes each built-in template in an expandable card.
+
+The default cleanup scope recognizes plugin markers plus all current and retired built-in/custom templates. The broader common-manual-number scope is opt-in and always previewed. Similar-looking user-authored numbers are never silently removed.
+
 ### Compatibility and limitations
 
 - Requires Obsidian 1.12.7+ on desktop.
 - Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.1.0.
+- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.2.0.
 - Source Mode decorations are disabled by default.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
 - Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.
@@ -120,6 +137,8 @@ npm run check
 ```
 
 `npm run check` verifies the pinned runtime, lint rules, strict TypeScript, unit tests, production bundle, manifest/version alignment, offline-only runtime contract, and the exact three-file release layout.
+
+Numeric `x.y.z` tags trigger the same pinned GitHub Actions release flow used by the sibling plugins: the full gate runs again, a deterministic manual-install ZIP is produced, public assets receive build-provenance attestations, and downloaded Release bytes are compared with the verified candidate. See [docs/RELEASING.md](docs/RELEASING.md).
 
 Architecture details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md).
 

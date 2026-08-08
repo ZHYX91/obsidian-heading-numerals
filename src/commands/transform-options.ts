@@ -1,6 +1,10 @@
 import { resolveNoteSettings } from "../config/frontmatter";
 import { parseNoteOverridesFromSource } from "../config/frontmatter-source";
-import { toNumberingOptions, type HeadingNumeralsSettings } from "../config/settings";
+import {
+  cleanupTemplateSources,
+  toNumberingOptions,
+  type HeadingNumeralsSettings,
+} from "../config/settings";
 import { planHeadingTransform } from "../core/transform";
 import type { TransformOperation, TransformPlan } from "../core/types";
 
@@ -26,11 +30,12 @@ export function createSourcePlan(
     status: "ready",
     plan: planHeadingTransform(source, operation, {
       numbering: toNumberingOptions(settings, {
-        scheme: effective.scheme,
+        schemeId: effective.schemeId,
         starts: effective.starts,
       }),
       writeMarkers: settings.writeMarkers,
-      cleanupThreshold: effective.cleanupThreshold,
+      cleanupScope: effective.cleanupScope,
+      templateSources: cleanupTemplateSources(settings),
       removeMultiplePrefixes: settings.removeMultiplePrefixes,
       normalizeManualOnRenumber: settings.normalizeManualOnRenumber,
     }),
