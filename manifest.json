@@ -1,0 +1,10 @@
+{
+  "id": "heading-numerals",
+  "name": "Heading Numerals",
+  "version": "0.1.0",
+  "minAppVersion": "1.12.7",
+  "description": "Write, remove, show, or conceal heading numbers without losing control of your Markdown source.",
+  "author": "ZhengYX",
+  "authorUrl": "https://github.com/ZHYX91",
+  "isDesktopOnly": true
+}

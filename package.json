@@ -1,0 +1,48 @@
+{
+  "name": "obsidian-heading-numerals",
+  "version": "0.1.0",
+  "description": "Write, remove, show, or conceal heading numbers in Obsidian.",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "npm run typecheck && npm run build:bundle && npm run check:release",
+    "build:bundle": "node esbuild.config.mjs production",
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "lint": "eslint main.ts src tests scripts esbuild.config.mjs eslint.config.mjs vitest.config.mts --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check:release": "node scripts/check-release.mjs",
+    "check": "npm run check:runtime && npm run lint && npm run typecheck && npm test && npm run build:bundle && npm run check:release"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "markdown",
+    "headings",
+    "numbering"
+  ],
+  "author": "ZhengYX",
+  "license": "MIT",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": "24.18.0"
+  },
+  "devDependencies": {
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "@vitest/coverage-v8": "4.1.10",
+    "esbuild": "0.28.1",
+    "eslint": "10.7.0",
+    "eslint-plugin-obsidianmd": "0.4.1",
+    "happy-dom": "20.10.6",
+    "obsidian": "1.13.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}
