@@ -93,6 +93,8 @@ export interface NumberingScheme {
   id: string;
   baseLevel: number;
   templates: readonly string[];
+  /** Original templates retained when a compatibility layer changes output-only templates. */
+  recognitionTemplates?: readonly string[];
   exclusions: readonly HeadingExclusionRule[];
 }
 
@@ -118,7 +120,6 @@ export interface CleanupTemplateSource {
 
 export interface NumberingOptions {
   scheme: NumberingScheme;
-  maxLevel: number;
   missingLevelStrategy: MissingLevelStrategy;
   starts: Readonly<Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>>;
 }

@@ -183,6 +183,33 @@ describe("settings", () => {
     expect(cleanupTemplateSources(configured).some((source) => source.revision === 1)).toBe(true);
   });
 
+  it("preserves legacy custom template semantics for an effect-safe migration", () => {
+    const configured = sanitizeSettings({
+      selectedSchemeId: "custom-legacy-semantics",
+      customSchemes: [{
+        id: "custom-legacy-semantics",
+        name: "Legacy semantics",
+        revision: 1,
+        baseLevel: 1,
+        templates: [
+          "{1.arabic}.{2.arabic}",
+          "Part {1.arabic}",
+          "",
+          "",
+          "",
+          "",
+        ],
+        exclusions: [],
+      }],
+    });
+
+    expect(configured.selectedSchemeId).toBe("custom-legacy-semantics");
+    expect(configured.customSchemes[0]?.templates.slice(0, 2)).toEqual([
+      "{1.arabic}.{2.arabic}",
+      "Part {1.arabic}",
+    ]);
+  });
+
   it("never hides the selected built-in scheme during sanitization", () => {
     const configured = sanitizeSettings({
       selectedSchemeId: "legal",

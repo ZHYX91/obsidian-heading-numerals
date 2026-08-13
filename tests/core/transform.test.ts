@@ -8,7 +8,6 @@ function options(overrides: Partial<TransformOptions> = {}): TransformOptions {
   return {
     numbering: {
       scheme: BUILT_IN_SCHEMES.hierarchical,
-      maxLevel: 6,
       missingLevelStrategy: "fill-one",
       starts: {},
     },

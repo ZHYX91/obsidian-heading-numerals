@@ -7,7 +7,6 @@ import { createDisplayPlan, type DisplayPlanOptions } from "../../src/applicatio
 
 const numbering: NumberingOptions = {
   scheme: BUILT_IN_SCHEMES.hierarchical,
-  maxLevel: 6,
   missingLevelStrategy: "fill-one",
   starts: {},
 };

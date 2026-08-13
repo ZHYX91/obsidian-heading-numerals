@@ -1,6 +1,13 @@
 # Runtime acceptance checklist
 
-Automated checks are necessary but do not prove Obsidian runtime behavior. Complete this checklist in a disposable acceptance Vault before publishing a release. Do not use a production Vault for first acceptance.
+This is a non-authoritative execution checklist. The normative evidence rules are in the stable
+[testing strategy](testing-strategy.en.md) and its [Chinese source](testing-strategy.zh-CN.md).
+Historical records under `docs/acceptance/` retain candidate-specific evidence and do not prove
+later versions.
+
+Automated checks are necessary but do not prove Obsidian runtime behavior. Complete this checklist
+in a disposable acceptance Vault before publishing a release. Do not use a production Vault for
+first acceptance.
 
 ## Test setup
 

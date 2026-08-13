@@ -1,0 +1,89 @@
+---
+doc_id: architecture
+language: zh-CN
+source_language: zh-CN
+translation_status: source
+status: stable
+last_synced: 2026-08-13
+---
+
+# 架构
+
+[English synced translation](architecture.en.md)
+
+<!-- section: authority -->
+## 文档权威性
+
+本文是架构边界的中文规范源，英文文件为同步译本。旧 `ARCHITECTURE.md` 只保留迁移导航，
+不再作为第二权威来源。
+
+<!-- section: system-shape -->
+## 系统形态
+
+```text
+Markdown source
+  -> context-aware ATX scanner
+  -> template compiler + shared prefix analysis
+  -> numbering engine and scheme templates
+  -> immutable transform plan OR display decoration plan
+  -> Editor/Vault adapter OR Live Preview/Reading View adapter
+```
+
+编号核心和计划层保持纯逻辑；Obsidian、CodeMirror、DOM、Editor 和 Vault 只存在于适配层。
+虚拟显示与文件写入不得各自实现编号规则。
+
+<!-- section: core -->
+## 核心与配置边界
+
+`heading-parser.ts` 返回 ATX 标题及源码偏移，并跳过 frontmatter、围栏代码、HTML/Obsidian
+注释和块。`template-compiler.ts` 将占位符编译为用于渲染、校验和模板前缀识别的 AST。
+`number-parser.ts` 对插件、模板和人工前缀提供来源、样式、规则及置信度；
+`prefix-analysis.ts` 是显示与写入共享入口。
+
+`numbering-engine.ts` 管理 H1-H6 计数、起始值、重置、空模板结构语义、排除和跨级策略。
+旧最大层级不属于核心接口；在迁移完成前，由设置适配层把受限层级派生为空输出模板，并保留
+原模板用于识别。`scheme-template-validation.ts` 定义新模板语义，迁移探针只报告风险，不静默
+删除旧数据。
+
+<!-- section: display-adapters -->
+## 显示适配层
+
+每个 CodeMirror `EditorView` 拥有一个 `ViewPlugin`，确认扫描器候选与语法树一致，区分实时
+预览和 Source Mode，并以 `Decoration.widget`/`Decoration.replace` 实现虚拟显示和隐藏。
+选择触及标题或 IME composition 时移除隐藏装饰。每个视图缓存自己的有效 Properties；无效
+YAML 可保留最后一次有效显示设置，但文件修改必须失败关闭。
+
+阅读视图后处理器读取整篇源码并生成完整编号计划，再按
+`MarkdownSectionInformation` 映射区块。只有源码与渲染标题数量和层级完全匹配时才修改 DOM；
+隐藏前还会验证精确前导文本。标题内容不得传入 `innerHTML`。
+
+<!-- section: file-mutations -->
+## 文件修改
+
+当前笔记先生成不可变 `TransformPlan`，确认时复核文件、视图和源码，再用一次编辑器事务应用。
+批处理先保存已打开编辑器、规划全部文件、显示聚合预览、复核全部源码、持久化有界恢复快照，
+再通过精确内容条件替换执行。失败时只回滚仍保持插件写入结果的文件；任何并发编辑都会保留，
+并使恢复记录继续可用。
+
+<!-- section: persistence -->
+## 持久化
+
+`data.json` 只保存 schema-versioned 设置。串行保存协调器合并频繁更新，并暴露待保存、失败和
+重试状态。最近批处理快照单独保存在 `recovery.json`；设置重置不得删除它。自定义方案修改或
+删除前的模板进入清理历史，直至用户明确清除。
+
+<!-- section: release-boundary -->
+## 构建与发布边界
+
+构建将 Obsidian 和 CodeMirror 宿主模块 externalize，只产生 `dist/main.js`、
+`dist/manifest.json` 和 `dist/styles.css`。源码门禁、候选包契约和版本契约不能替代隔离 Vault
+中的宿主验收。发布流程见[发布策略](release.zh-CN.md)。
+
+<!-- section: change-rules -->
+## 变更规则
+
+- `src/core` 不得导入 Obsidian、浏览器全局或 Node 运行时模块。
+- 文件写入只能消费经过预览和过期校验的不可变计划。
+- 扩大清理识别前必须先增加误报测试。
+- 新设置必须有清洗、克隆、持久化、UI 合约和迁移路径。
+- 架构、产品需求和 UX 的中文源修改必须同步英文并通过文档检查。

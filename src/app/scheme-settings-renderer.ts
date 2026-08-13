@@ -7,7 +7,8 @@ import {
   findMatchingBuiltInSchemeId,
   isBuiltInSchemeId,
 } from "../core/schemes";
-import { compileTemplate, NUMBER_FORMATS, renderTemplate } from "../core/template-compiler";
+import { NUMBER_FORMATS, renderTemplate } from "../core/template-compiler";
+import { inspectSchemeTemplates } from "../core/scheme-template-validation";
 import { matchHeadingExclusion, normalizeExclusionTitle } from "../core/heading-exclusions";
 import {
   BUILT_IN_SCHEME_IDS,
@@ -272,7 +273,7 @@ export class SchemeSettingsRenderer {
     validation.setAttribute("role", "alert");
     const previewElements: HTMLElement[] = [];
     const updateValidation = (): boolean => {
-      const invalidTemplate = draft.templates.some((template) => compileTemplate(template).diagnostics.length > 0);
+      const invalidTemplate = inspectSchemeTemplates(draft.templates).length > 0;
       const normalizedTitles = draft.exclusions.map((rule) => normalizeExclusionTitle(rule.title));
       const invalidExclusions = normalizedTitles.some((title) => title.length === 0)
         || new Set(normalizedTitles).size !== normalizedTitles.length;

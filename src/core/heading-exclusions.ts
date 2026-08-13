@@ -21,7 +21,7 @@ function titleCandidates(
       schemeId: scheme.id,
       schemeName: scheme.id,
       revision: 1,
-      templates: scheme.templates,
+      templates: scheme.recognitionTemplates ?? scheme.templates,
     }],
   });
   if (

@@ -22,7 +22,6 @@ export function numberHeadings(
   options: NumberingOptions,
 ): NumberedHeading[] {
   const scheme = options.scheme;
-  const maxLevel = Math.min(6, Math.max(scheme.baseLevel, Math.trunc(options.maxLevel)));
   const starts = Array.from({ length: 6 }, (_unused, index) => normalizedStart(options, index + 1));
   const counters = starts.map((start) => start - 1) as Counters;
   const initialized = [false, false, false, false, false, false];
@@ -73,7 +72,13 @@ export function numberHeadings(
       active[lower] = false;
     }
 
-    if (heading.level < scheme.baseLevel || heading.level > maxLevel) {
+    if (heading.level < scheme.baseLevel) {
+      output.push({ heading, label: null, counters: cloneCounters(counters), warning: null, exclusion: null });
+      continue;
+    }
+
+    const template = scheme.templates[index] ?? "";
+    if (template.trim().length === 0) {
       output.push({ heading, label: null, counters: cloneCounters(counters), warning: null, exclusion: null });
       continue;
     }
@@ -102,7 +107,6 @@ export function numberHeadings(
       }
     }
 
-    const template = scheme.templates[index] ?? "";
     const currentCounters = cloneCounters(counters);
     const label = missing.length > 0 && options.missingLevelStrategy === "current-only"
       ? renderCurrentLevel(template, heading.level, currentCounters)

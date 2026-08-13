@@ -1,85 +1,106 @@
 # Heading Numerals
 
-[中文](#中文) · [English](#english)
+[简体中文](docs/i18n/README.zh-CN.md)
 
-Heading Numerals separates two decisions that Markdown tools often mix together:
+Heading Numerals separates two decisions that Markdown tools often mix together: whether heading
+numbers are stored in a Markdown file and whether those numbers are visible in Obsidian. It can
+write, remove, virtually display, or visually conceal heading numbers without network access or
+telemetry.
 
-- whether heading numbers are stored in the Markdown file; and
-- whether heading numbers are visible in Obsidian.
+Current release: `0.6.0`. The plugin is available from Obsidian Community Plugins. Automated gates,
+packaged-candidate checks, and dated Obsidian acceptance records are separate forms of evidence.
 
-It can write, remove, virtually display, or visually conceal heading numbers without network access or telemetry.
+<!-- section: features -->
+## Features
 
-> Current version: `0.6.0`. Automated checks and release-asset verification are built in; real Obsidian behavior is tracked separately in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). The plugin is available from Obsidian Community Plugins.
+- Show calculated heading numbers in Live Preview and Reading View without changing Markdown.
+- Conceal recognized stored numbers while keeping the source unchanged and accessible.
+- Combine virtual display and concealment to replace one recognized stored prefix visually.
+- Preview and then write, remove, or renumber headings in the current note.
+- Process a folder or vault with stale-content guards, bounded recovery data, and conflict-safe
+  rollback.
+- Use built-in hierarchical, Chinese official-document, and legal-document schemes.
+- Create multiple custom schemes with validated H1-H6 templates and retained cleanup history.
+- Exclude an exact heading or its whole subtree without consuming a number.
+- Override display, concealment, scheme, cleanup scope, starting counters, or full opt-out per note.
+- Use English or Simplified Chinese interface text.
 
-## 中文
+<!-- section: requirements-and-compatibility -->
+## Requirements and compatibility
 
-### 核心能力
+- Obsidian `1.12.7` or later.
+- The manifest permits desktop and mobile loading.
+- Dated runtime records exist for Windows desktop and an Android 15 / API 35 emulator.
+- Emulator evidence is not physical-device evidence. Physical Android devices, macOS, and Linux
+  remain separate, unaccepted targets until dated records exist for them.
+- Automated tests do not prove host behavior. See the
+  [testing strategy](docs/testing-strategy.en.md) and the non-authoritative
+  [runtime checklist](docs/ACCEPTANCE.md).
 
-| 源文件状态 | 你想看到的效果 | 使用方式 | 是否修改 Markdown |
+<!-- section: installation -->
+## Installation
+
+### Community Plugins
+
+In Obsidian, open **Settings → Community plugins → Browse**, search for **Heading Numerals**, install
+it, and enable it.
+
+### Manual installation
+
+Download `main.js`, `manifest.json`, and `styles.css` from one matching GitHub Release. Place those
+three files in `.obsidian/plugins/heading-numerals/`, then reload Obsidian and enable the plugin.
+Do not mix files from different versions.
+
+<!-- section: usage -->
+## Usage
+
+| Source state | Desired result | Action | Changes Markdown |
 |---|---|---|---|
-| 没有序号 | 只在界面看到序号 | 显示虚拟序号 | 否 |
-| 没有序号 | 把序号保存到文件 | 写入标题序号 | 是 |
-| 已有序号 | 保留文件但不在界面显示 | 隐藏已有序号 | 否 |
-| 已有序号 | 隐藏实体序号并显示统一的计算序号 | 同时启用显示与隐藏 | 否 |
-| 已有序号 | 从文件删除序号 | 清理标题序号 | 是 |
+| No stored number | Show a number only in Obsidian | Enable virtual numbers | No |
+| No stored number | Save calculated numbers | Write heading numbers | Yes |
+| Stored number | Hide it visually | Enable concealment | No |
+| Stored number | Replace it with a calculated display number | Enable virtual numbers and concealment | No |
+| Stored number | Remove it from the file | Remove heading numbers | Yes |
 
-显示与隐藏使用 CodeMirror 6 Decoration 和 Reading View 后处理器，不改文件内容；写入、清理和重新编号会先显示逐项预览。
+Use the ribbon icon or **Open current note controls** command for note-level display and scheme
+choices. File-changing commands always show a preview. Writing or removing a number changes the
+heading text and can invalidate `[[Note#Heading]]` links, heading embeds, or external anchors; the
+plugin does not guess and rewrite those links.
 
-### 安全设计
+<!-- section: settings -->
+## Settings
 
-- 只处理标准 ATX 标题（`#` 至 `######`），跳过 YAML、围栏代码块、HTML/Obsidian `%%` 注释与块、blockquote、列表和普通文本。
-- 默认不删除 `3.14`、`2.0`、`2026`、日期、单位数量等有歧义的数字文本。
-- 写入命令不会静默覆盖人工序号；重新编号只会在预览后规范化高置信度人工序号。
-- 当前笔记的全部变更通过一次 Editor transaction 应用，可单步撤销。
-- 文件夹/全库处理必须预览；通过原子条件替换重新校验每个文件，先保存可恢复快照，失败时只回滚仍保持插件写入结果的文件，不覆盖并发编辑。
-- 显示功能无网络请求、遥测或远程资源。
-- 不可见 U+2060 来源标记是实验选项，默认关闭；随时可以执行“移除来源标记”而保留可见序号。
+### Numbering schemes
 
-实体操作会改变标题文本，因此可能使 `[[笔记#标题]]`、标题嵌入或外部锚点失效。预览窗口会明确提醒，但插件不会猜测并重写你的链接。
+Templates use `{heading-level.number-format}` placeholders, such as `{1.arabic}` or
+`{2.chinese_lower}`. Supported formats are Arabic, full-width Arabic, lower/upper Chinese, circled,
+upper/lower Latin letters, and upper/lower Roman numerals.
 
-### 序号方案
+An empty Hn template does not output a number, but that heading remains structural: it increments
+its counter, resets deeper counters, and can be referenced by descendant templates. A non-empty Hn
+template must include an Hn placeholder and must not reference a deeper heading level. The maximum
+numbered heading level remains available as a compatibility control; scheme templates are the
+per-level rule used by the numbering core.
 
-- 层级数字（H1 起始）：`1`、`1.1`、`1.1.1`
-- 层级数字（H2 起始）：H1 作为文档标题，H2 从 `1` 开始
-- 中文公文：`一、`、`（一）`、`1.`、`（1）`、`①`
-- 法律条文：`第一编`、`第一章`、`第一节`、`第一条`
-- 自定义方案：可添加多个、修改、删除；内置方案可展开查看并复制成自定义方案
+Custom schemes may exclude exact logical heading titles. A whole-subtree exclusion skips the
+heading and all descendants; a heading-only exclusion leaves descendants to the selected
+skipped-level strategy. Exclusions do not use fuzzy matching or regular expressions.
 
-自定义方案还可以添加“排除标题”。规则精确匹配移除已识别序号后的 Markdown 标题文本，命中的标题不会占用序号：
+### Cleanup and source markers
 
-- “整个章节”会跳过该标题及其全部后代，离开该章节后继续原有计数；这是默认且更安全的选择。
-- “仅此标题”只跳过当前标题，其后代按现有“标题跨级策略”处理，不会错误继承上一个编号章节。
+The default cleanup scope recognizes source markers plus current and retired built-in/custom
+templates. The broader common-manual-number scope is opt-in and previewed. Ambiguous decimals,
+versions, years, dates, and measurement-like prefixes are preserved by default.
 
-排除规则不支持模糊匹配或正则表达式；空白和重复规则无法保存。设置页会显示当前笔记的命中数量和标题，内置方案需先复制为自定义方案才能添加规则。重新编号时，只有来源标记或已知模板能够确认的旧序号会从排除标题中移除；有歧义的人工前缀仍会保留并显示在预览警告中。
+Optional U+2060 source markers make plugin-written numbers exact to identify. They are experimental
+and disabled by default because invisible characters can affect interoperability, copied text, and
+heading links. A dedicated command removes markers while retaining visible numbers.
 
-占位符写法是 `{标题层级.数字格式}`。例如 `{1.arabic}` 表示“把 H1 的计数显示为阿拉伯数字”，`{2.chinese_lower}` 表示“把 H2 的计数显示为中文小写数字”。设置页会直接列出并预览所有格式：
+### Per-note Properties
 
-| 数字格式 | 示例 |
-|---|---|
-| `arabic` / `arabic_full` | `1` / `１` |
-| `chinese_lower` / `chinese_upper` | `一` / `壹` |
-| `circled` | `①` |
-| `letter_upper` / `letter_lower` | `A` / `a` |
-| `roman_upper` / `roman_lower` | `I` / `i` |
-
-清理范围默认选择“当前及历史模板”：它会识别来源标记、全部内置方案、全部自定义方案以及自定义方案保存或删除前的历史版本。较宽的“常见人工序号”范围需要用户主动选择，并始终通过变更预览；人工输入的数字不会因为看起来相似就被静默删除。
-
-### 命令
-
-- 恢复原样显示 / 独立切换显示虚拟标题序号 / 独立切换隐藏已有标题序号
-- 向当前笔记写入标题序号
-- 清理当前笔记的标题序号
-- 重新编号当前笔记
-- 移除当前笔记中的来源标记
-- 处理文件夹或整个库
-- 撤销最近一次批量处理
-- 打开当前笔记控制面板
-
-### Properties 覆盖
-
-单击 Obsidian 左侧栏的 Heading Numerals 图标会打开紧凑的当前笔记控制面板。面板会显示笔记名，以及每项设置的“全局值 / 当前笔记覆盖 / 最终生效值”。显示虚拟序号和隐藏已有序号分别提供“跟随全局 / 开启 / 关闭”，序号方案只能从内置及自定义方案中选择；还可以完全忽略当前笔记、全部恢复为跟随全局、执行当前笔记快速操作、打开批处理或全局设置。
-
-默认不会向笔记写入任何属性。只有明确设置覆盖时才通过 Obsidian 的 Properties API 写入；改回“跟随全局”会删除对应属性，“全部恢复”会删除所有 Heading Numerals 笔记级属性。命令面板入口仍保留，便于设置快捷键。
+The current-note panel exposes global, override, and effective values. Untouched notes receive no
+plugin Properties. Returning a control to **Follow global** deletes that property; **Restore all**
+removes every Heading Numerals override and preserves unrelated Properties.
 
 ```yaml
 ---
@@ -92,84 +113,74 @@ heading-numerals-start:
 ---
 ```
 
-通常不需要手写这些属性。`heading-numerals-show-virtual` 与 `heading-numerals-conceal-stored` 可以分别设为 `true` 或 `false`。旧的 `heading-numerals` 仍兼容 `inherit`、`normal`、`show`、`conceal`、`show-conceal` 和 `off`，在面板中修改显示项时会无损迁移为独立属性。`heading-numerals-clean-scope` 可设为 `plugin`、`templates` 或 `common`。也可以使用 `heading-numerals-ignore: true` 让当前笔记完全退出显示和文件操作。0.1 的 `heading-numerals-clean-confidence` 仍会自动迁移。
+`heading-numerals-ignore: true` opts the note out of display and file operations. Legacy combined
+display and cleanup-confidence properties are read for backward compatibility.
 
-### 安装与开发
+<!-- section: limitations -->
+## Limitations
 
-可在 Obsidian 的“第三方插件”中搜索 Heading Numerals 并安装。也可以从 GitHub Release 手动安装，或进行开发安装：
+- One Markdown file has one effective numbering scheme; section-local scheme switching is not
+  supported.
+- Only top-level ATX H1-H6 headings are handled. Setext headings, blockquotes, lists, comments,
+  frontmatter, fenced code, and HTML blocks are not numbering targets.
+- Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export
+  integration are not included in `0.6.0`.
+- Source Mode decorations are disabled by default so stored Markdown remains directly visible.
+- Reading View concealment changes visible text, not the heading DOM `id`; anchors still follow the
+  stored heading.
+- If a third-party renderer changes heading count or levels, Reading View fails closed for that
+  section.
 
-1. 运行 `npm ci && npm run build`。
-2. 将 `dist/main.js`、`dist/manifest.json`、`dist/styles.css` 复制到测试 Vault 的 `.obsidian/plugins/heading-numerals/`。
-3. 在 Obsidian 设置中启用插件。
+<!-- section: privacy-and-security -->
+## Privacy and security
 
-要求：Obsidian 1.12.7 或更高版本。manifest 允许桌面端与移动端；Windows 与 Android 15 模拟器已有独立验收记录，Android 实体设备、macOS 和 Linux 仍需单独验收，不能由自动化或模拟器记录代替。
+Heading Numerals runs locally and contains no networking, telemetry, analytics, advertisements,
+remote fonts, or remote assets. Virtual display and concealment never call file-write APIs.
 
-## English
+Current-note changes use one editor transaction. Batch operations preview all targets, revalidate
+their exact content, persist bounded recovery data, and avoid overwriting concurrent edits. These
+safeguards reduce risk but do not make first-run testing in an ordinary or production vault
+appropriate. Use an isolated test vault for acceptance.
 
-### Features
+Report security or data-loss concerns through [GitHub Security Advisories](SECURITY.md) without
+including private vault content.
 
-- Write calculated numbers into the current Markdown note.
-- Remove recognized stored numbers through an explainable preview.
-- Show virtual numbers in Live Preview and Reading View without changing the file.
-- Conceal stored numbers visually while preserving the source.
-- Enable virtual display and stored-number concealment together to replace recognized stored prefixes visually.
-- Renumber a note using the same engine as virtual display.
-- Process a folder or the whole vault with atomic stale-content guards, a persisted recovery snapshot, and conflict-safe rollback.
-- Override virtual display, stored-number concealment, scheme, cleanup scope, and starting counters per note through Properties.
-- Open a compact current-note control panel from the left ribbon, with global, override, and effective values shown side by side.
-- Add, edit, and delete multiple custom schemes while retaining retired template revisions for cleanup.
-- Exclude exact heading titles from a custom scheme, either for that heading alone or for its whole subtree, with live current-note match feedback.
-- Use English or Simplified Chinese UI text.
+<!-- section: development -->
+## Development
 
-### Safety and source control
-
-Ambiguous decimal, version, year, date, and measurement-like prefixes are preserved. Manual numbers are never silently removed by the write command. Every file-changing command has a preview, and a stale current-note preview is rejected.
-
-Optional U+2060 source markers make plugin-written numbers exact to identify, but they are disabled by default because invisible characters can affect interoperability and heading links. A dedicated command strips the markers while keeping visible numbers.
-
-Writing or removing numbers changes heading text. Existing links to headings may need manual repair; Heading Numerals does not rewrite links automatically.
-
-### Current-note controls and Properties
-
-Click the Heading Numerals ribbon icon to open the current-note panel. Virtual display and stored-number concealment each have independent Follow global / On / Off states. The scheme is selected from available built-in and custom schemes; users never need to type an internal scheme ID. The panel also exposes note ignore, reset-to-global, current-note file actions, batch processing, and global settings.
-
-An untouched note gets no plugin Properties. Explicit overrides are written through Obsidian's Properties API and take priority over global settings. Choosing Follow global deletes the corresponding property; Restore all removes every Heading Numerals note override. Command-palette entries remain available for keyboard shortcuts and experienced users.
-
-### Template placeholders and cleanup
-
-A placeholder uses `{heading-level.number-format}`. For example, `{1.arabic}` renders the H1 counter as `1`, while `{2.chinese_lower}` renders the H2 counter as `一`. The settings page lists every supported format with examples and exposes each built-in template in an expandable card.
-
-The default cleanup scope recognizes plugin markers plus all current and retired built-in/custom templates. The broader common-manual-number scope is opt-in and always previewed. Similar-looking user-authored numbers are never silently removed.
-
-Custom schemes can also exclude exact Markdown heading titles. A whole-section rule skips the matched heading and all descendants; a heading-only rule leaves descendants to the configured skipped-level strategy. Excluded headings do not consume counters. Existing prefixes are removed during renumbering only when a marker or known template confirms that they are plugin-managed.
-
-### Compatibility and limitations
-
-- Requires Obsidian 1.12.7+ on desktop or mobile. Windows and an Android 15 emulator have dated records; physical Android devices, macOS, and Linux remain separate open acceptance targets.
-- Supports top-level ATX H1-H6 headings.
-- Setext headings, Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export integration are not included in 0.6.0.
-- Source Mode decorations are disabled by default.
-- Reading View concealment changes visible text, not the heading DOM `id`; anchors continue to follow the stored heading.
-- Third-party renderers that change heading count or levels cause the Reading View processor to fail closed for that section.
-- Automated tests do not replace the manual runtime checks in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
-
-### Development
+Use Node.js `24.18.0` and npm `11.16.0`.
 
 ```bash
 npm ci
 npm run check
 ```
 
-`npm run check` verifies the pinned runtime, lint rules, strict TypeScript, full-source coverage thresholds, production bundle, manifest/version alignment, offline-only runtime contract, and the exact three-file release layout.
+`npm run check` verifies the pinned runtime, formatting, bilingual README and canonical-document
+contracts, lint, strict TypeScript, coverage thresholds, the production bundle, and the exact
+release layout. It is source/package evidence, not Obsidian runtime acceptance.
 
-Numeric `x.y.z` tags trigger the same pinned GitHub Actions release flow used by the sibling plugins: the full gate runs again, a deterministic manual-install ZIP is produced, public assets receive build-provenance attestations, and downloaded Release bytes are compared with the verified candidate. See [docs/RELEASING.md](docs/RELEASING.md).
+Stable project documents:
 
-Architecture details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md).
+- [Product requirements](docs/product-requirements.en.md)
+- [UX specification](docs/ux-spec.en.md)
+- [Architecture](docs/architecture.en.md)
+- [Testing strategy](docs/testing-strategy.en.md)
+- [Release policy](docs/release.en.md)
 
-## Privacy
+Governance and project history:
 
-Heading Numerals runs locally. It contains no networking, telemetry, analytics, advertisements, remote fonts, or remote assets.
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
+<!-- section: support -->
+## Support
+
+Use [GitHub Issues](https://github.com/ZHYX91/obsidian-heading-numerals/issues) for reproducible bugs
+and feature requests. Include plugin and Obsidian versions, operating system, minimal synthetic
+Markdown, the selected scheme, and the exact action taken. Do not attach private vault content.
+
+<!-- section: license -->
 ## License
 
 [MIT](LICENSE)

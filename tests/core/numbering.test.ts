@@ -8,7 +8,6 @@ import type { NumberingOptions } from "../../src/core/types";
 function options(overrides: Partial<NumberingOptions> = {}): NumberingOptions {
   return {
     scheme: BUILT_IN_SCHEMES.hierarchical,
-    maxLevel: 6,
     missingLevelStrategy: "fill-one",
     starts: {},
     ...overrides,
@@ -39,12 +38,58 @@ describe("numberHeadings", () => {
     });
   });
 
-  it("honors custom starts and maximum levels", () => {
+  it("honors custom starts", () => {
     const result = numberHeadings(
       parseAtxHeadings("# A\n## B\n### C"),
-      options({ starts: { 1: 2, 2: 3 }, maxLevel: 2 }),
+      options({ starts: { 1: 2, 2: 3 } }),
     );
-    expect(result.map((item) => item.label)).toEqual(["2", "2.3", null]);
+    expect(result.map((item) => item.label)).toEqual(["2", "2.3", "2.3.1"]);
+  });
+
+  it("keeps an empty-template level structural for descendant counters and resets", () => {
+    const result = numberHeadings(
+      parseAtxHeadings("# A\n## Hidden B\n### C\n## Hidden D\n### E"),
+      options({
+        scheme: {
+          id: "custom-empty-level",
+          baseLevel: 1,
+          templates: [
+            "{1.arabic}",
+            "",
+            "{1.arabic}.{2.arabic}.{3.arabic}",
+            "",
+            "",
+            "",
+          ],
+          exclusions: [],
+        },
+      }),
+    );
+
+    expect(result.map((item) => item.label)).toEqual(["1", null, "1.1.1", null, "1.2.1"]);
+    expect(result[1]?.counters).toEqual([1, 1, 0, 0, 0, 0]);
+    expect(result[3]?.counters).toEqual([1, 2, 0, 0, 0, 0]);
+  });
+
+  it("does not report a missing parent for a structural empty-template level", () => {
+    const result = numberHeadings(
+      parseAtxHeadings("# A\n### Hidden"),
+      options({
+        missingLevelStrategy: "skip",
+        scheme: {
+          id: "custom-empty-deep-level",
+          baseLevel: 1,
+          templates: ["{1.arabic}", "{2.arabic}", "", "", "", ""],
+          exclusions: [],
+        },
+      }),
+    );
+
+    expect(result[1]).toMatchObject({
+      label: null,
+      warning: null,
+      counters: [1, 0, 1, 0, 0, 0],
+    });
   });
 
   it("formats built-in numeral styles", () => {

@@ -12,6 +12,8 @@ import {
   type SchemeId,
 } from "../core/types";
 import { compileTemplate } from "../core/template-compiler";
+import { applyLegacyMaxLevel, legacyMaxLevelAffectsScheme } from "../core/legacy-max-level";
+import { inspectSchemeTemplates } from "../core/scheme-template-validation";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
 export interface HeadingNumeralsSettings {
@@ -59,6 +61,13 @@ export interface LastBatchSnapshot {
 export interface PersistedPluginData {
   settings: HeadingNumeralsSettings;
   lastBatch: LastBatchSnapshot | null;
+}
+
+export interface MaxLevelRemovalProbe {
+  readonly legacyMaxLevel: number;
+  readonly affectedSchemeIds: readonly string[];
+  readonly semanticallyInvalidCustomSchemeIds: readonly string[];
+  readonly safeToRemove: boolean;
 }
 
 export const DEFAULT_CUSTOM_TEMPLATES = [
@@ -346,11 +355,27 @@ export function toNumberingOptions(
     starts?: Readonly<Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>>;
   }> = {},
 ): NumberingOptions {
+  const scheme = resolveScheme(overrides.schemeId ?? settings.selectedSchemeId, settings.customSchemes);
   return {
-    scheme: resolveScheme(overrides.schemeId ?? settings.selectedSchemeId, settings.customSchemes),
-    maxLevel: settings.maxLevel,
+    scheme: applyLegacyMaxLevel(scheme, settings.maxLevel),
     missingLevelStrategy: settings.missingLevelStrategy,
     starts: overrides.starts ?? {},
+  };
+}
+
+export function probeMaxLevelRemoval(settings: HeadingNumeralsSettings): MaxLevelRemovalProbe {
+  const schemes = [...Object.values(BUILT_IN_SCHEMES), ...settings.customSchemes];
+  const affectedSchemeIds = schemes
+    .filter((scheme) => legacyMaxLevelAffectsScheme(scheme, settings.maxLevel))
+    .map((scheme) => scheme.id);
+  const semanticallyInvalidCustomSchemeIds = settings.customSchemes
+    .filter((scheme) => inspectSchemeTemplates(scheme.templates).length > 0)
+    .map((scheme) => scheme.id);
+  return {
+    legacyMaxLevel: settings.maxLevel,
+    affectedSchemeIds,
+    semanticallyInvalidCustomSchemeIds,
+    safeToRemove: affectedSchemeIds.length === 0 && semanticallyInvalidCustomSchemeIds.length === 0,
   };
 }
 

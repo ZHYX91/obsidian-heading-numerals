@@ -1,0 +1,92 @@
+---
+doc_id: product-requirements
+language: en
+source_language: zh-CN
+translation_of: product-requirements.zh-CN.md
+translation_status: synced
+status: stable
+last_synced: 2026-08-13
+---
+
+# Product requirements
+
+[中文规范源](product-requirements.zh-CN.md)
+
+<!-- section: authority -->
+## Document authority
+
+The Chinese document is the normative source for Heading Numerals product requirements. This file
+is its synchronized English translation. If implementation, tests, or legacy documents conflict
+with it, update and review the Chinese source first, then synchronize English. Historical acceptance
+records prove only their candidate and host environment; they cannot change product requirements.
+
+<!-- section: purpose -->
+## Product purpose
+
+Heading Numerals lets users control separately whether heading numbers are stored in Markdown and
+whether they are visible in Obsidian. Users must be able to keep clean source, save stored numbers,
+conceal stored numbers, or replace their visual presentation with calculated numbers while every
+file change remains previewable, explainable, and recoverable where practical.
+
+<!-- section: users-and-jobs -->
+## Users and core jobs
+
+- Users who want hierarchical numbers in Obsidian without changing Markdown.
+- Users who need numbered Markdown for other tools.
+- Users with stored numbers who want to conceal or safely remove them.
+- Users who need official-document, legal-document, or custom hierarchical formats.
+- Users who need consistent operations for one note, a folder, or a vault.
+
+<!-- section: scope -->
+## Scope
+
+The product handles top-level ATX H1-H6 headings and supports Live Preview, Reading View,
+current-note writes, batch operations, built-in and custom schemes, exact-title exclusions,
+per-note Properties, and English/Chinese UI. One Markdown file has one effective scheme; embedded
+files remain governed by their own file settings.
+
+<!-- section: functional-requirements -->
+## Functional requirements
+
+1. Virtual display and visual concealment must not modify Markdown.
+2. Write, remove, renumber, and marker-removal operations must first create immutable preview plans.
+3. Virtual display, Reading View, and file operations must share one numbering semantics.
+4. An empty Hn template outputs nothing but still increments, resets descendants, and participates
+   in descendant templates.
+5. A non-empty Hn template must contain its own-level placeholder and cannot reference descendants.
+6. The legacy maximum-level setting must preserve existing effects through a reversible
+   compatibility layer until migration is complete.
+7. Templates retired by custom-scheme edits or deletion must remain available for recognizing old
+   plugin numbers until the user explicitly clears history.
+8. Exact exclusions cannot use fuzzy or regular-expression matching and cannot consume counters.
+9. Untouched notes must receive no plugin Properties; returning to inheritance must delete the
+   relevant property.
+
+<!-- section: safety-requirements -->
+## Safety requirements
+
+- Ambiguous decimals, versions, years, dates, and measurement-like prefixes fail closed by default.
+- Writes cannot silently replace unconfirmed manual numbering.
+- Current-note confirmation must revalidate the file, view, and previewed source.
+- Batch work must revalidate every target, persist bounded recovery data, and stop on concurrent
+  conflicts instead of overwriting them.
+- Source markers remain off by default and have a removal path that keeps visible numbers.
+- The plugin contains no networking, telemetry, advertisements, or remote assets.
+- Stored-heading edits can break heading links; the plugin warns instead of guessing link rewrites.
+
+<!-- section: non-goals -->
+## Non-goals
+
+- No section-local scheme switching or custom Markdown control syntax.
+- No automatic rewriting of heading links, embeds, or external anchors.
+- No commitment to Setext, Canvas, Outline, Backlinks, Search Results, or PDF export integration.
+- No claim that automated tests, emulator records, or a successful build accept every host platform.
+
+<!-- section: acceptance -->
+## Product acceptance
+
+Every requirement needs pure-logic or adapter coverage. Claims involving real Obsidian UI, IME,
+mobile, themes, or lifecycle also need dated evidence from an isolated vault. Source checks,
+candidate-package checks, host acceptance, physical-device acceptance, and public release status
+must be reported separately. See the [testing strategy](testing-strategy.en.md) and
+[release policy](release.en.md).
