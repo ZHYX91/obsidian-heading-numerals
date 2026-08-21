@@ -24,10 +24,11 @@ function createHost() {
 }
 
 describe("Obsidian 1.13 settings definitions", () => {
-  it("exposes six native pages instead of a custom tablist", () => {
+  it("retains six native pages while the host falls back to the custom tablist", () => {
     const host = createHost();
     const tab = new HeadingNumeralsSettingTab(new App(), host as never);
-    const definitions = tab.getSettingDefinitions();
+    expect(tab.getSettingDefinitions()).toEqual([]);
+    const definitions = tab.getDeclarativeSettingDefinitions();
 
     expect(definitions.map((definition) => "type" in definition ? definition.type : undefined)).toEqual([
       "page",

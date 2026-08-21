@@ -27,6 +27,10 @@ import {
   type SettingsControlKey,
 } from "./settings-control-contract";
 
+// Obsidian 1.13 bypasses display() for non-empty definitions. Temporarily keep
+// the established top-tab settings surface while retaining the definitions.
+const ENABLE_DECLARATIVE_SETTINGS = false;
+
 class ResetSettingsModal extends Modal {
   constructor(
     app: App,
@@ -63,6 +67,10 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
   }
 
   override getSettingDefinitions(): SettingDefinitionItem<SettingsControlKey>[] {
+    return ENABLE_DECLARATIVE_SETTINGS ? this.getDeclarativeSettingDefinitions() : [];
+  }
+
+  getDeclarativeSettingDefinitions(): SettingDefinitionItem<SettingsControlKey>[] {
     this.imperativeVisible = false;
     const t = createTranslator(this.plugin.settings.language);
     return getDeclarativeSettingDefinitions({
