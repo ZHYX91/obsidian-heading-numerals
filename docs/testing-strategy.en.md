@@ -5,7 +5,7 @@ source_language: zh-CN
 translation_of: testing-strategy.zh-CN.md
 translation_status: synced
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # Testing strategy
@@ -36,10 +36,11 @@ Reports identify their evidence level and cannot infer a higher-level pass from 
 ## Automated tests
 
 Core tests cover scanning, template compilation, formats, prefix recognition, exclusions, counters,
-migration compatibility, and immutable change plans. Application tests cover virtual/conceal plans,
+migration compatibility, immutable change plans, caption parsing, and independent caption counters.
+Application tests cover virtual/conceal plans, fail-closed same-file reference resolution,
 Properties parsing, note overrides, and conditional replacement. Adapter tests cover recovery data,
-Reading View DOM behavior, and settings contracts. Broader prefix recognition requires
-false-positive fixtures first.
+Reading View DOM behavior, semantic-marker cleanup, and settings contracts. Broader recognition
+requires false-positive fixtures first.
 
 Coverage thresholds are regression floors, not quality targets or host acceptance. New critical
 branches need behavioral assertions even when aggregate coverage stays above threshold.
@@ -65,6 +66,10 @@ First runs use an isolated acceptance vault. At minimum, verify current-note con
 display/concealment, Live Preview, Reading View, previewed writes and undo, source accessibility,
 plugin-disable cleanup, same-length edits, Properties persistence, and link-risk messaging. Batch
 work also verifies stale previews, concurrent conflicts, mid-run failure, recovery, and exclusions.
+
+The 0.7 line additionally verifies all four caption keywords with and without IDs, independent
+per-file counters, explicit heading/block references and aliases, ordinary-link non-interference,
+fail-closed missing/duplicate targets, embedded-file boundaries, and Markdown byte identity.
 
 IME, mobile, pop-out windows, third-party themes, and long-document latency require real host
 environments; automated DOM tests cannot replace them. Detailed steps remain in the

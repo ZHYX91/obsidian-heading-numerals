@@ -24,21 +24,27 @@ import {
 import { parseAtxHeadings } from "../core/heading-parser";
 import type { ParsedHeading } from "../core/types";
 import { createDisplayPlan } from "../application/display-plan";
-import { createVirtualNumeralElement } from "../ui/virtual-numeral";
+import { createSemanticDisplayPlan } from "../application/semantic-display-plan";
+import { createVirtualNumeralElement, createVirtualSemanticElement } from "../ui/virtual-numeral";
 
 export const refreshHeadingDisplay = StateEffect.define<void>();
 
 class NumeralWidget extends WidgetType {
-  constructor(private readonly label: string) {
+  constructor(
+    private readonly label: string,
+    private readonly kind: "heading" | "caption" | "reference" = "heading",
+  ) {
     super();
   }
 
   override eq(other: NumeralWidget): boolean {
-    return this.label === other.label;
+    return this.label === other.label && this.kind === other.kind;
   }
 
   override toDOM(view: EditorView): HTMLElement {
-    return createVirtualNumeralElement(view.dom.ownerDocument, this.label);
+    return this.kind === "heading"
+      ? createVirtualNumeralElement(view.dom.ownerDocument, this.label)
+      : createVirtualSemanticElement(view.dom.ownerDocument, this.label, this.kind);
   }
 
   override ignoreEvent(): boolean {
@@ -149,22 +155,40 @@ export class HeadingDisplayController {
           from: range.from,
           to: range.to,
         }));
+        const templateSources = cleanupTemplateSources(settings);
+        const numbering = toNumberingOptions(settings, {
+          schemeId: effective.schemeId,
+          starts: effective.starts,
+        });
         const plan = createDisplayPlan(headings, {
           showVirtualNumbers: effective.showVirtualNumbers,
           concealStoredNumbers: effective.concealStoredNumbers,
-          numbering: toNumberingOptions(settings, {
-            schemeId: effective.schemeId,
-            starts: effective.starts,
-          }),
+          numbering,
           cleanupScope: effective.cleanupScope,
-          templateSources: cleanupTemplateSources(settings),
+          templateSources,
           revealOnActiveLine: settings.revealOnActiveLine,
           selections,
           composing: this.view.composing,
         });
+        const semanticPlan = createSemanticDisplayPlan(source, headings, {
+          showCaptionNumbers: settings.showCaptionNumbers,
+          showCrossReferences: settings.showCrossReferences,
+          numbering,
+          templateSources,
+          headingDisplayPlan: plan,
+          composing: this.view.composing,
+        });
         const builder = new RangeSetBuilder<Decoration>();
-        for (const item of plan) {
-          if (item.kind === "virtual") {
+        const decorations = [
+          ...plan.map((item) => ({ ...item, semanticKind: null })),
+          ...semanticPlan.map((item) => ({ ...item, semanticKind: item.kind })),
+        ].sort((left, right) => left.from - right.from || left.to - right.to);
+        for (const item of decorations) {
+          if (item.semanticKind === "caption" || item.semanticKind === "reference") {
+            builder.add(item.from, item.to, item.semanticKind === "reference"
+              ? Decoration.replace({ widget: new NumeralWidget(item.label, "reference"), inclusive: false })
+              : Decoration.widget({ widget: new NumeralWidget(item.label, "caption"), side: -1 }));
+          } else if (item.kind === "virtual") {
             builder.add(item.from, item.to, Decoration.widget({
               widget: new NumeralWidget(item.label),
               side: -1,

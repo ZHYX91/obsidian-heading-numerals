@@ -5,7 +5,7 @@ source_language: zh-CN
 translation_of: product-requirements.zh-CN.md
 translation_status: synced
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # Product requirements
@@ -42,8 +42,9 @@ file change remains previewable, explainable, and recoverable where practical.
 
 The product handles top-level ATX H1-H6 headings and supports Live Preview, Reading View,
 current-note writes, batch operations, built-in and custom schemes, exact-title exclusions,
-per-note Properties, and English/Chinese UI. One Markdown file has one effective scheme; embedded
-files remain governed by their own file settings.
+per-note Properties, display-only caption numbers, same-file semantic cross references, and
+English/Chinese UI. One Markdown file is the scope for heading schemes, each caption-type counter,
+and reference resolution; embedded files remain governed by their own source and settings.
 
 <!-- section: functional-requirements -->
 ## Functional requirements
@@ -61,6 +62,13 @@ files remain governed by their own file settings.
 8. Exact exclusions cannot use fuzzy or regular-expression matching and cannot consume counters.
 9. Untouched notes must receive no plugin Properties; returning to inheritance must delete the
    relevant property.
+10. Only top-level `Figure:`, `Table:`, `Equation:`, and `Code:` paragraphs declare captions;
+    `Listing:` is not compatible. Each type counts independently from 1 per Markdown file, with or
+    without a block ID, and display must never write a stored caption number.
+11. Only `@[[#Heading]]` and `@[[#^block-id]]`, with optional Obsidian aliases, request semantic
+    same-file enhancement. Ordinary links remain unchanged. Resolution consumes existing anchors
+    and fails closed unless the unique target has a visible valid heading or caption number.
+12. The plugin must not create, validate, migrate, repair, or otherwise manage heading or block IDs.
 
 <!-- section: safety-requirements -->
 ## Safety requirements
@@ -77,8 +85,10 @@ files remain governed by their own file settings.
 <!-- section: non-goals -->
 ## Non-goals
 
-- No section-local scheme switching or custom Markdown control syntax.
+- No section-local scheme switching or user-defined control syntax beyond the frozen caption and
+  explicit semantic-reference declarations.
 - No automatic rewriting of heading links, embeds, or external anchors.
+- No cross-file semantic-reference resolution.
 - No commitment to Setext, Canvas, Outline, Backlinks, Search Results, or PDF export integration.
 - No claim that automated tests, emulator records, or a successful build accept every host platform.
 

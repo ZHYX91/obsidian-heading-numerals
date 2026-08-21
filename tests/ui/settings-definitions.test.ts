@@ -24,7 +24,7 @@ function createHost() {
 }
 
 describe("Obsidian 1.13 settings definitions", () => {
-  it("exposes four native pages instead of a custom tablist", () => {
+  it("exposes six native pages instead of a custom tablist", () => {
     const host = createHost();
     const tab = new HeadingNumeralsSettingTab(new App(), host as never);
     const definitions = tab.getSettingDefinitions();
@@ -34,16 +34,22 @@ describe("Obsidian 1.13 settings definitions", () => {
       "page",
       "page",
       "page",
+      "page",
+      "page",
     ]);
     expect(definitions.map((definition) => "name" in definition ? definition.name : "")).toEqual([
       "General",
-      "Numbering schemes",
+      "Heading numbering",
+      "Captions",
+      "Cross references",
       "Write and cleanup",
       "Display and batch",
     ]);
     const serialized = JSON.stringify(definitions);
     expect(serialized).toContain('"key":"general.showVirtualNumbers"');
     expect(serialized).toContain('"key":"general.concealStoredNumbers"');
+    expect(serialized).toContain('"key":"captions.showCaptionNumbers"');
+    expect(serialized).toContain('"key":"references.showCrossReferences"');
     expect(serialized).not.toContain('"key":"general.displayMode"');
     expect(tab.containerEl.querySelector("[role=tablist]")).toBeNull();
   });
@@ -57,13 +63,17 @@ describe("Obsidian 1.13 settings definitions", () => {
     await tab.setControlValue("general.language", "zh");
     await tab.setControlValue("general.showVirtualNumbers", true);
     await tab.setControlValue("general.concealStoredNumbers", true);
+    await tab.setControlValue("captions.showCaptionNumbers", false);
+    await tab.setControlValue("references.showCrossReferences", false);
     await tab.setControlValue("views.excludedFolders", "Private, /Archive/, Private");
 
     expect(host.settings.language).toBe("zh");
     expect(host.settings.showVirtualNumbers).toBe(true);
     expect(host.settings.concealStoredNumbers).toBe(true);
+    expect(host.settings.showCaptionNumbers).toBe(false);
+    expect(host.settings.showCrossReferences).toBe(false);
     expect(host.settings.excludedFolders).toEqual(["Private", "Archive"]);
-    expect(host.saveSettings).toHaveBeenCalledTimes(3);
+    expect(host.saveSettings).toHaveBeenCalledTimes(5);
     expect(host.scheduleSettings).toHaveBeenCalledTimes(1);
   });
 

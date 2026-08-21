@@ -17,3 +17,17 @@ export function createVirtualNumeralElement(ownerDocument: Document, label: stri
   element.setAttribute("contenteditable", "false");
   return element;
 }
+
+export function createVirtualSemanticElement(
+  ownerDocument: Document,
+  label: string,
+  kind: "caption" | "reference",
+): HTMLSpanElement {
+  const fragment = (ownerDocument.win as ObsidianWindow).createFragment();
+  const element = fragment.createSpan();
+  element.className = `${VIRTUAL_NUMERAL_CLASS} heading-numerals-${kind}-number`;
+  element.textContent = kind === "caption" ? ` ${label}` : `${label} `;
+  element.setAttribute("aria-hidden", "true");
+  element.setAttribute("contenteditable", "false");
+  return element;
+}

@@ -2,6 +2,26 @@
 
 All notable changes will be documented in this file.
 
+## 0.7.0 - 2026-08-21
+
+### Added
+
+- Added display-only numbering for top-level `Figure:`, `Table:`, `Equation:`, and `Code:` captions, with independent per-file counters and no ID requirement.
+- Added explicit same-file `@[[#Heading]]` and `@[[#^block-id]]` number enhancement, including Obsidian aliases and fail-closed target resolution.
+- Added dedicated Caption and Cross references settings pages in the six-page Obsidian 1.13 and fallback settings experience.
+
+### Changed
+
+- Persisted settings migrate to schema 5 with independent caption and cross-reference display controls.
+- The interface language description now explicitly states that Follow Obsidian uses Obsidian's interface language.
+- Canonical bilingual product, UX, architecture, testing, README, and acceptance contracts now define one Markdown file as the caption and semantic-reference scope.
+- Updated the transitive development-only `nanoid` package to the patched 3.3.18 release.
+
+### Safety
+
+- Caption and reference display never writes Markdown or creates, validates, migrates, repairs, or manages IDs.
+- `Listing:`, ordinary wiki links, cross-file targets, missing or duplicate anchors, protected Markdown regions, and targets without a visible valid number remain unchanged.
+
 ## 0.6.0 - 2026-08-09
 
 ### Added

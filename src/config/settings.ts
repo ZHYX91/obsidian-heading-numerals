@@ -17,10 +17,12 @@ import { inspectSchemeTemplates } from "../core/scheme-template-validation";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
 export interface HeadingNumeralsSettings {
-  schemaVersion: 4;
+  schemaVersion: 5;
   language: "auto" | "en" | "zh";
   showVirtualNumbers: boolean;
   concealStoredNumbers: boolean;
+  showCaptionNumbers: boolean;
+  showCrossReferences: boolean;
   selectedSchemeId: string;
   customSchemes: CustomNumberingScheme[];
   hiddenBuiltInSchemeIds: string[];
@@ -80,10 +82,12 @@ export const DEFAULT_CUSTOM_TEMPLATES = [
 ];
 
 export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   language: "auto",
   showVirtualNumbers: false,
   concealStoredNumbers: false,
+  showCaptionNumbers: true,
+  showCrossReferences: true,
   selectedSchemeId: "hierarchical-h2",
   customSchemes: [],
   hiddenBuiltInSchemeIds: [],
@@ -240,10 +244,12 @@ export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
     : [];
 
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     language: oneOf(raw.language, ["auto", "en", "zh"] as const, DEFAULT_SETTINGS.language),
     showVirtualNumbers: booleanOr(raw.showVirtualNumbers, legacyDisplay.showVirtualNumbers),
     concealStoredNumbers: booleanOr(raw.concealStoredNumbers, legacyDisplay.concealStoredNumbers),
+    showCaptionNumbers: booleanOr(raw.showCaptionNumbers, DEFAULT_SETTINGS.showCaptionNumbers),
+    showCrossReferences: booleanOr(raw.showCrossReferences, DEFAULT_SETTINGS.showCrossReferences),
     selectedSchemeId,
     customSchemes,
     hiddenBuiltInSchemeIds,

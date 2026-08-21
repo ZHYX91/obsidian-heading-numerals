@@ -12,6 +12,11 @@
   display: none;
 }
 
+.heading-numerals-caption-number,
+.heading-numerals-reference-number {
+  margin-inline-end: 0;
+}
+
 .heading-numerals-settings-save-status {
   align-items: center;
   background: var(--background-secondary);

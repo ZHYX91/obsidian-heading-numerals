@@ -1,4 +1,4 @@
-export type SettingsTabId = "general" | "schemes" | "cleanup" | "views";
+export type SettingsTabId = "general" | "headings" | "captions" | "references" | "cleanup" | "views";
 
 export interface SettingsTabDefinition {
   readonly id: SettingsTabId;

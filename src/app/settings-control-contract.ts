@@ -5,6 +5,8 @@ export type SettingsControlKey =
   | "general.language"
   | "general.showVirtualNumbers"
   | "general.concealStoredNumbers"
+  | "captions.showCaptionNumbers"
+  | "references.showCrossReferences"
   | "general.maxLevel"
   | "general.missingLevelStrategy"
   | "cleanup.writeMarkers"
@@ -31,6 +33,8 @@ const SETTINGS_CONTROL_KEYS = new Set<SettingsControlKey>([
   "general.language",
   "general.showVirtualNumbers",
   "general.concealStoredNumbers",
+  "captions.showCaptionNumbers",
+  "references.showCrossReferences",
   "general.maxLevel",
   "general.missingLevelStrategy",
   "cleanup.writeMarkers",
@@ -59,6 +63,8 @@ export function getSettingsControlValue(
     case "general.language": return settings.language;
     case "general.showVirtualNumbers": return settings.showVirtualNumbers;
     case "general.concealStoredNumbers": return settings.concealStoredNumbers;
+    case "captions.showCaptionNumbers": return settings.showCaptionNumbers;
+    case "references.showCrossReferences": return settings.showCrossReferences;
     case "general.maxLevel": return settings.maxLevel;
     case "general.missingLevelStrategy": return settings.missingLevelStrategy;
     case "cleanup.writeMarkers": return settings.writeMarkers;
@@ -97,6 +103,14 @@ export function applySettingsControlValue(
       break;
     case "general.concealStoredNumbers":
       next.concealStoredNumbers = controlBoolean(key, value);
+      impact = "display";
+      break;
+    case "captions.showCaptionNumbers":
+      next.showCaptionNumbers = controlBoolean(key, value);
+      impact = "display";
+      break;
+    case "references.showCrossReferences":
+      next.showCrossReferences = controlBoolean(key, value);
       impact = "display";
       break;
     case "general.maxLevel":

@@ -31,6 +31,16 @@ first acceptance.
 - [ ] Enable virtual numbers and concealment together; each recognized stored prefix must be replaced by exactly one virtual number in Live Preview and Reading View.
 - [ ] Reload and disable the plugin; confirm source text remains accessible and Reading View DOM decoration disappears.
 
+## Captions and same-file references
+
+- [ ] Verify `Figure:`, `Table:`, `Equation:`, and `Code:` each start at 1 and increment independently; `Listing:` remains unchanged.
+- [ ] Verify captions without IDs are numbered and captions with inline or immediately following user-authored block IDs receive the same behavior.
+- [ ] Confirm Live Preview and Reading View show `Figure 1:`-style labels while the Markdown bytes, mtime, and IDs remain unchanged.
+- [ ] Verify `@[[#Heading]]`, `@[[#^block-id]]`, and both `|alias` forms retain native link navigation and add a number only when the target has a visible valid number.
+- [ ] Verify ordinary `[[#...]]`, cross-file links, missing targets, duplicate headings/IDs, and unnumbered headings remain unchanged.
+- [ ] Embed a numbered note into another note and confirm each file keeps independent caption counters and reference targets.
+- [ ] Compose with an IME, reload, disable the plugin, and switch views; all replaced `@` markers and source syntax must remain recoverable and unchanged.
+
 ## Multi-pane and lifecycle
 
 - [ ] Open different notes in two panes with different Properties view modes.

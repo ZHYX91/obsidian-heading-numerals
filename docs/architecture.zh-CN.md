@@ -4,7 +4,7 @@ language: zh-CN
 source_language: zh-CN
 translation_status: source
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # 架构
@@ -22,10 +22,10 @@ last_synced: 2026-08-13
 
 ```text
 Markdown source
-  -> context-aware ATX scanner
+  -> context-aware ATX and frozen-semantic scanners
   -> template compiler + shared prefix analysis
-  -> numbering engine and scheme templates
-  -> immutable transform plan OR display decoration plan
+  -> heading numbering + per-type caption numbering + fail-closed reference resolution
+  -> immutable transform plan OR non-writing display decoration plan
   -> Editor/Vault adapter OR Live Preview/Reading View adapter
 ```
 
@@ -45,6 +45,11 @@ Markdown source
 原模板用于识别。`scheme-template-validation.ts` 定义新模板语义，迁移探针只报告风险，不静默
 删除旧数据。
 
+`document-semantics.ts` 是四种固定题注声明和显式同文件 `@` 引用的纯逻辑扫描器。它跳过受
+保护 Markdown 区域，不创建 ID，把重复目标视为歧义，并为每份源文档重新开始四个独立题注
+计数。`semantic-display-plan.ts` 将扫描结果与标题显示计划合并；标题引用只能消费最终确实
+可见的序号，题注引用则只在题注显示开启时获得固定类型标签。
+
 <!-- section: display-adapters -->
 ## 显示适配层
 
@@ -56,6 +61,11 @@ YAML 可保留最后一次有效显示设置，但文件修改必须失败关闭
 阅读视图后处理器读取整篇源码并生成完整编号计划，再按
 `MarkdownSectionInformation` 映射区块。只有源码与渲染标题数量和层级完全匹配时才修改 DOM；
 隐藏前还会验证精确前导文本。标题内容不得传入 `innerHTML`。
+
+题注和引用组件使用同一套 CodeMirror 生命周期与阅读视图全文缓存，但绝不进入
+`TransformPlan` 或任何 Editor/Vault 修改路径。阅读视图保留原生 Obsidian 链接元素，只在
+增强期间替换显式前导 `@`，清理时恢复该标记。嵌入 Markdown 按 `context.sourcePath` 键控，
+计数与目标不会在宿主文件和嵌入源码之间泄漏。
 
 <!-- section: file-mutations -->
 ## 文件修改

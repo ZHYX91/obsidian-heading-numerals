@@ -54,7 +54,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       await this.recoveryStore.save(data.lastBatch);
     }
     this.settingsCoordinator = new SettingsSaveCoordinator(async (snapshot) => {
-      await this.saveData({ schemaVersion: 4, settings: snapshot });
+      await this.saveData({ schemaVersion: 5, settings: snapshot });
     });
     await this.settingsCoordinator.save(cloneSettings(this.settings)).catch((error: unknown) => {
       console.error("Heading Numerals: initial settings migration remains pending", error);
@@ -287,8 +287,13 @@ export default class HeadingNumeralsPlugin extends Plugin {
       for (const virtual of ownerDocument.querySelectorAll<HTMLElement>(
         ".markdown-reading-view .heading-numerals-virtual",
       )) {
-        virtual.remove();
+        const original = virtual.dataset.headingNumeralsOriginal;
+        if (original != null) virtual.replaceWith(original);
+        else virtual.remove();
       }
+      for (const anchor of ownerDocument.querySelectorAll<HTMLElement>(
+        ".markdown-reading-view [data-heading-numerals-reference]",
+      )) delete anchor.dataset.headingNumeralsReference;
       for (const concealed of ownerDocument.querySelectorAll<HTMLElement>(
         ".markdown-reading-view .heading-numerals-concealed",
       )) {

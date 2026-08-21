@@ -7,7 +7,7 @@ numbers are stored in a Markdown file and whether those numbers are visible in O
 write, remove, virtually display, or visually conceal heading numbers without network access or
 telemetry.
 
-Current release: `0.6.0`. The plugin is available from Obsidian Community Plugins. Automated gates,
+Current release: `0.7.0`. The plugin is available from Obsidian Community Plugins. Automated gates,
 packaged-candidate checks, and dated Obsidian acceptance records are separate forms of evidence.
 
 <!-- section: features -->
@@ -22,6 +22,10 @@ packaged-candidate checks, and dated Obsidian acceptance records are separate fo
 - Use built-in hierarchical, Chinese official-document, and legal-document schemes.
 - Create multiple custom schemes with validated H1-H6 templates and retained cleanup history.
 - Exclude an exact heading or its whole subtree without consuming a number.
+- Show display-only numbers for `Figure:`, `Table:`, `Equation:`, and `Code:` captions; each type
+  starts at 1 in every Markdown file and captions do not require IDs.
+- Enhance explicit same-file `@[[#Heading]]` and `@[[#^block-id]]` references, including aliases,
+  only when the existing target has a visible valid number.
 - Override display, concealment, scheme, cleanup scope, starting counters, or full opt-out per note.
 - Use English or Simplified Chinese interface text.
 
@@ -67,8 +71,17 @@ choices. File-changing commands always show a preview. Writing or removing a num
 heading text and can invalidate `[[Note#Heading]]` links, heading embeds, or external anchors; the
 plugin does not guess and rewrite those links.
 
+Caption and cross-reference display never writes Markdown. A caption is a top-level paragraph that
+starts with exactly `Figure:`, `Table:`, `Equation:`, or `Code:`. `Listing:` is not an alias. The
+plugin consumes only user-authored Obsidian heading links and block IDs; it never creates, validates,
+migrates, repairs, or otherwise manages anchors. Normal `[[#...]]` links remain entirely Obsidian's.
+
 <!-- section: settings -->
 ## Settings
+
+Obsidian 1.13 presents six native pages: General, Heading numbering, Captions, Cross references,
+Write and cleanup, and Display and batch. Obsidian 1.12 uses an accessible six-tab fallback with the
+same labels and controls.
 
 ### Numbering schemes
 
@@ -121,10 +134,11 @@ display and cleanup-confidence properties are read for backward compatibility.
 
 - One Markdown file has one effective numbering scheme; section-local scheme switching is not
   supported.
+- Caption counters and semantic-reference resolution are also scoped to one Markdown file. Embedded
+  files use their own source and counters; cross-file semantic references are not recognized.
 - Only top-level ATX H1-H6 headings are handled. Setext headings, blockquotes, lists, comments,
   frontmatter, fenced code, and HTML blocks are not numbering targets.
-- Canvas, embedded-note special handling, Outline, Backlinks, Search Results, and PDF export
-  integration are not included in `0.6.0`.
+- Canvas, Outline, Backlinks, Search Results, and PDF export integration are not included in `0.7.0`.
 - Source Mode decorations are disabled by default so stored Markdown remains directly visible.
 - Reading View concealment changes visible text, not the heading DOM `id`; anchors still follow the
   stored heading.

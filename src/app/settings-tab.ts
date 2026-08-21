@@ -135,7 +135,9 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const statusCleanup = this.renderSaveStatus(containerEl, t);
     const tabs = [
       { id: "general", label: t("settings.tab.general") },
-      { id: "schemes", label: t("settings.tab.schemes") },
+      { id: "headings", label: t("settings.tab.headings") },
+      { id: "captions", label: t("settings.tab.captions") },
+      { id: "references", label: t("settings.tab.references") },
       { id: "cleanup", label: t("settings.tab.cleanup") },
       { id: "views", label: t("settings.tab.views") },
     ] as const;
@@ -146,7 +148,9 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       target?.focus();
     });
     if (this.activeTab === "general") this.renderGeneral(layout.panel, t);
-    else if (this.activeTab === "schemes") this.schemeRenderer(t).renderSchemes(layout.panel);
+    else if (this.activeTab === "headings") this.renderHeadings(layout.panel, t);
+    else if (this.activeTab === "captions") this.renderCaptions(layout.panel, t);
+    else if (this.activeTab === "references") this.renderReferences(layout.panel, t);
     else if (this.activeTab === "cleanup") this.renderCleanup(layout.panel, t);
     else this.renderViews(layout.panel, t);
     this.cleanup = () => {
@@ -238,6 +242,16 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.language)
         .onChange((value) => this.updateControl("general.language", value)));
     new Setting(container)
+      .setName(t("settings.reset"))
+      .setDesc(t("settings.reset.desc"))
+      .addButton((button) => button.setButtonText(t("settings.reset.button")).setWarning().onClick(() => {
+        this.openResetModal(t);
+      }));
+  }
+
+  private renderHeadings(container: HTMLElement, t: Translate): void {
+    new Setting(container).setName(t("settings.headings")).setHeading();
+    new Setting(container)
       .setName(t("settings.showVirtual"))
       .setDesc(t("settings.showVirtual.desc"))
       .addToggle((toggle) => toggle.setValue(this.plugin.settings.showVirtualNumbers)
@@ -264,12 +278,23 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
         .addOption("skip", t("missing.skip"))
         .setValue(this.plugin.settings.missingLevelStrategy)
         .onChange((value) => this.updateControl("general.missingLevelStrategy", value)));
-    new Setting(container)
-      .setName(t("settings.reset"))
-      .setDesc(t("settings.reset.desc"))
-      .addButton((button) => button.setButtonText(t("settings.reset.button")).setWarning().onClick(() => {
-        this.openResetModal(t);
-      }));
+    this.schemeRenderer(t).renderSchemes(container);
+  }
+
+  private renderCaptions(container: HTMLElement, t: Translate): void {
+    new Setting(container).setName(t("settings.captions")).setHeading();
+    new Setting(container).setName(t("settings.captions.enable"))
+      .setDesc(t("settings.captions.enable.desc"))
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.showCaptionNumbers)
+        .onChange((value) => this.updateControl("captions.showCaptionNumbers", value)));
+  }
+
+  private renderReferences(container: HTMLElement, t: Translate): void {
+    new Setting(container).setName(t("settings.references")).setHeading();
+    new Setting(container).setName(t("settings.references.enable"))
+      .setDesc(t("settings.references.enable.desc"))
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.showCrossReferences)
+        .onChange((value) => this.updateControl("references.showCrossReferences", value)));
   }
 
   private renderCleanup(container: HTMLElement, t: Translate): void {

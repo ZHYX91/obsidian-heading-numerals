@@ -227,4 +227,77 @@ describe("HeadingReadingProcessor", () => {
       heading.querySelector(".heading-numerals-virtual")?.textContent ?? null
     ))).toEqual(["1 ", null, null, "1.1 "]);
   });
+
+  it("renders virtual caption numbers without changing caption text or requiring IDs", async () => {
+    const { processor, context, container } = harness(
+      "Figure: Plain\nFigure: Target ^fig",
+      settings({ showCaptionNumbers: true }),
+    );
+    const first = document.createElement("p");
+    first.textContent = "Figure: Plain";
+    const second = document.createElement("p");
+    second.textContent = "Figure: Target";
+    container.append(first, second);
+
+    await processor.process(container, context);
+
+    expect(first.textContent).toBe("Figure 1: Plain");
+    expect(second.textContent).toBe("Figure 2: Target");
+    expect(container.querySelectorAll(".heading-numerals-caption-number")).toHaveLength(2);
+  });
+
+  it("enhances explicit same-file references while preserving the Obsidian link and alias", async () => {
+    const { processor, context, container } = harness(
+      "# Heading\nCross @[[Other#Heading]]\nSee @[[#Heading|chapter]]",
+      settings({ showVirtualNumbers: true, showCrossReferences: true, selectedSchemeId: "hierarchical" }),
+    );
+    const heading = document.createElement("h1");
+    heading.textContent = "Heading";
+    const paragraph = document.createElement("p");
+    paragraph.append("See @");
+    const link = document.createElement("a");
+    link.className = "internal-link";
+    link.dataset.href = "#Heading";
+    link.textContent = "chapter";
+    paragraph.append(link);
+    const crossFile = document.createElement("p");
+    crossFile.append("Cross @");
+    const crossFileLink = document.createElement("a");
+    crossFileLink.className = "internal-link";
+    crossFileLink.dataset.href = "Other#Heading";
+    crossFileLink.textContent = "Heading";
+    crossFile.append(crossFileLink);
+    container.append(heading, crossFile, paragraph);
+
+    await processor.process(container, context);
+
+    expect(paragraph.textContent).toBe("See 1 chapter");
+    expect(paragraph.querySelector("a")?.textContent).toBe("chapter");
+    expect(crossFile.textContent).toBe("Cross @Heading");
+    expect(paragraph.querySelector(".heading-numerals-reference-number")?.textContent).toBe("1 ");
+    await processor.process(container, context);
+    expect(paragraph.textContent).toBe("See 1 chapter");
+  });
+
+  it("fails closed for semantic references whose target has no visible valid number", async () => {
+    const { processor, context, container } = harness(
+      "# Heading\nSee @[[#Heading]]",
+      settings({ showVirtualNumbers: false, showCrossReferences: true }),
+    );
+    const heading = document.createElement("h1");
+    heading.textContent = "Heading";
+    const paragraph = document.createElement("p");
+    paragraph.append("See @");
+    const link = document.createElement("a");
+    link.className = "internal-link";
+    link.dataset.href = "#Heading";
+    link.textContent = "Heading";
+    paragraph.append(link);
+    container.append(heading, paragraph);
+
+    await processor.process(container, context);
+
+    expect(paragraph.textContent).toBe("See @Heading");
+    expect(paragraph.querySelector(".heading-numerals-reference-number")).toBeNull();
+  });
 });

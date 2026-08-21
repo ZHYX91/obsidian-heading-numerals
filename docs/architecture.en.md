@@ -5,7 +5,7 @@ source_language: zh-CN
 translation_of: architecture.zh-CN.md
 translation_status: synced
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # Architecture
@@ -24,10 +24,10 @@ authority.
 
 ```text
 Markdown source
-  -> context-aware ATX scanner
+  -> context-aware ATX and frozen-semantic scanners
   -> template compiler + shared prefix analysis
-  -> numbering engine and scheme templates
-  -> immutable transform plan OR display decoration plan
+  -> heading numbering + per-type caption numbering + fail-closed reference resolution
+  -> immutable transform plan OR non-writing display decoration plan
   -> Editor/Vault adapter OR Live Preview/Reading View adapter
 ```
 
@@ -49,6 +49,13 @@ until migration completes, the settings adapter derives affected levels as empty
 and retains original templates for recognition. `scheme-template-validation.ts` defines new
 semantics, while the migration probe reports risk without silently deleting old data.
 
+`document-semantics.ts` is the pure scanner for the four fixed caption declarations and explicit
+same-file `@` references. It skips protected Markdown regions, creates no IDs, treats duplicate
+targets as ambiguous, and restarts all four independent caption counters for each source document.
+`semantic-display-plan.ts` combines those results with the heading display plan. A heading reference
+receives a label only from a number that will actually remain visible; a caption reference receives
+its fixed type label only when caption display is enabled.
+
 <!-- section: display-adapters -->
 ## Display adapters
 
@@ -62,6 +69,12 @@ The Reading View postprocessor reads the full source and creates one document nu
 mapping `MarkdownSectionInformation` ranges. DOM changes occur only when source and rendered heading
 counts and levels match exactly; concealment also validates exact leading text. Heading content is
 never passed to `innerHTML`.
+
+Caption and reference widgets use the same CodeMirror lifecycle and full-source Reading View cache,
+but never enter `TransformPlan` or any Editor/Vault mutation path. Reading View preserves the native
+Obsidian link element and replaces only the explicit leading `@` while enhanced. Cleanup restores
+that marker. Embedded Markdown is keyed by `context.sourcePath`, so counters and targets never leak
+between the embedding file and embedded source.
 
 <!-- section: file-mutations -->
 ## File mutations

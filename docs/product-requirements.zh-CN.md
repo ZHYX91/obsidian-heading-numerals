@@ -4,7 +4,7 @@ language: zh-CN
 source_language: zh-CN
 translation_status: source
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # 产品需求
@@ -38,8 +38,9 @@ Heading Numerals 让用户分别控制“标题序号是否写入 Markdown”和
 ## 范围
 
 产品处理顶层 ATX H1-H6 标题，支持实时预览、阅读视图、当前笔记写入操作、批处理、内置及
-自定义方案、精确标题排除、按笔记 Properties 覆盖和中英文界面。一个 Markdown 文件只有
-一套最终生效方案；嵌入的文件仍按各自文件设置处理。
+自定义方案、精确标题排除、按笔记 Properties 覆盖、纯显示题注编号、同文件语义交叉引用和
+中英文界面。标题方案、每种题注计数和引用解析都以单个 Markdown 文件为作用域；嵌入文件仍
+按自己的源码与设置处理。
 
 <!-- section: functional-requirements -->
 ## 功能要求
@@ -53,6 +54,12 @@ Heading Numerals 让用户分别控制“标题序号是否写入 Markdown”和
 7. 自定义方案修改或删除前的模板必须可用于识别历史插件序号，直至用户明确清除历史。
 8. 精确排除不得使用模糊或正则匹配；排除标题不得占用计数。
 9. 未触碰的笔记不得被写入插件 Properties；恢复继承必须删除相应属性。
+10. 只有顶层 `Figure:`、`Table:`、`Equation:` 和 `Code:` 段落声明题注；不兼容
+    `Listing:`。四种类型在每个 Markdown 文件内分别从 1 开始，无论是否存在块 ID 都编号，
+    显示路径不得写入实体题注编号。
+11. 只有 `@[[#标题]]` 和 `@[[#^块ID]]` 及其可选 Obsidian 别名请求同文件语义增强；普通
+    链接保持原样。解析只消费已有锚点，且仅在唯一目标具有可见有效标题或题注编号时增强。
+12. 插件不得创建、校验、迁移、修复或以其他方式管理标题 ID 或块 ID。
 
 <!-- section: safety-requirements -->
 ## 安全要求
@@ -68,8 +75,9 @@ Heading Numerals 让用户分别控制“标题序号是否写入 Markdown”和
 <!-- section: non-goals -->
 ## 非目标
 
-- 不支持正文内局部方案切换或自定义 Markdown 控制语法。
+- 不支持正文内局部方案切换，也不支持已冻结题注和显式语义引用声明之外的用户自定义控制语法。
 - 不自动重写标题链接、嵌入或外部锚点。
+- 不解析跨文件语义引用。
 - 不承诺 Setext、Canvas、Outline、Backlinks、Search Results 或 PDF 导出集成。
 - 不把自动测试、模拟器记录或构建成功表述为所有宿主平台验收。
 

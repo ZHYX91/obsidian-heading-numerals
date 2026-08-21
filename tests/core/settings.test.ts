@@ -60,7 +60,7 @@ describe("settings", () => {
       showVirtualNumbers: true,
       concealStoredNumbers: true,
     })).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       showVirtualNumbers: true,
       concealStoredNumbers: true,
     });
@@ -154,7 +154,7 @@ describe("settings", () => {
         ],
       }],
     });
-    expect(configured.schemaVersion).toBe(4);
+    expect(configured.schemaVersion).toBe(5);
     expect(configured.customSchemes[0]?.exclusions).toEqual([
       { title: "References", scope: "heading" },
       { title: "Appendix", scope: "subtree" },

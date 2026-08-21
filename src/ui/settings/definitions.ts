@@ -28,12 +28,33 @@ export function getDeclarativeSettingDefinitions(
     },
     {
       type: "page",
-      name: t("settings.tab.schemes"),
+      name: t("settings.tab.headings"),
       displayValue: context.selectedSchemeName,
       items: [
         saveStatusDefinition(context),
+        { type: "group", heading: t("settings.headings"), items: headingDefinitions(context) },
         customDefinition(t("settings.scheme"), context.renderSchemes),
       ],
+    },
+    {
+      type: "page",
+      name: t("settings.tab.captions"),
+      items: [saveStatusDefinition(context), {
+        type: "group",
+        heading: t("settings.captions"),
+        items: [toggleDefinition("captions.showCaptionNumbers", t("settings.captions.enable"),
+          t("settings.captions.enable.desc"), DEFAULT_SETTINGS.showCaptionNumbers)],
+      }],
+    },
+    {
+      type: "page",
+      name: t("settings.tab.references"),
+      items: [saveStatusDefinition(context), {
+        type: "group",
+        heading: t("settings.references"),
+        items: [toggleDefinition("references.showCrossReferences", t("settings.references.enable"),
+          t("settings.references.enable.desc"), DEFAULT_SETTINGS.showCrossReferences)],
+      }],
     },
     {
       type: "page",
@@ -64,6 +85,24 @@ function generalDefinitions(
       { auto: t("language.auto"), en: t("language.en"), zh: t("language.zh") },
       DEFAULT_SETTINGS.language,
     ),
+    {
+      name: t("settings.reset"),
+      desc: t("settings.reset.desc"),
+      render: (setting) => {
+        setting.addButton((button) => {
+          button.buttonEl.addClass("mod-warning");
+          button.setButtonText(t("settings.reset.button")).onClick(context.openResetModal);
+        });
+      },
+    },
+  ];
+}
+
+function headingDefinitions(
+  context: DeclarativeSettingsContext,
+): SettingGroupItem<SettingsControlKey>[] {
+  const { t } = context;
+  return [
     toggleDefinition(
       "general.showVirtualNumbers",
       t("settings.showVirtual"),
@@ -106,16 +145,6 @@ function generalDefinitions(
       },
       DEFAULT_SETTINGS.missingLevelStrategy,
     ),
-    {
-      name: t("settings.reset"),
-      desc: t("settings.reset.desc"),
-      render: (setting) => {
-        setting.addButton((button) => {
-          button.buttonEl.addClass("mod-warning");
-          button.setButtonText(t("settings.reset.button")).onClick(context.openResetModal);
-        });
-      },
-    },
   ];
 }
 

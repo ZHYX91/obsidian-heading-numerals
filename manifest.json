@@ -1,9 +1,9 @@
 {
   "id": "heading-numerals",
   "name": "Heading Numerals",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "minAppVersion": "1.12.7",
-  "description": "Write, remove, show, or conceal heading numbers without losing control of your Markdown source.",
+  "description": "Display or manage heading numbers, virtual captions, and same-file references without losing control of Markdown.",
   "author": "ZhengYX",
   "authorUrl": "https://github.com/ZHYX91",
   "isDesktopOnly": false

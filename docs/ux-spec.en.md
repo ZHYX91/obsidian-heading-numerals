@@ -5,7 +5,7 @@ source_language: zh-CN
 translation_of: ux-spec.zh-CN.md
 translation_status: synced
 status: stable
-last_synced: 2026-08-13
+last_synced: 2026-08-21
 ---
 
 # UX specification
@@ -52,7 +52,8 @@ writes and offers retry.
 <!-- section: settings-experience -->
 ## Global settings experience
 
-Settings are grouped into general, schemes, cleanup, and views. Built-in schemes can be expanded
+Settings use six consistent pages: General, Heading numbering, Captions, Cross references, Write
+and cleanup, and Display and batch. Built-in schemes can be expanded
 and copied to custom schemes. A custom scheme provides name, base level, live H1-H6 template
 previews, and exact exclusions. Empty templates display “This level is not numbered.” Invalid
 non-empty semantics block save with a comprehensible constraint message.
@@ -75,6 +76,13 @@ Virtual numbers appear before heading text but do not enter copied text or edita
 When stored numbers are concealed, a cursor or selection touching the heading line reveals source;
 decorations are removed during IME composition. Reading View does not partially guess when source
 and rendered heading count or levels differ.
+
+A recognized caption visually changes from `Figure:` to `Figure 1:` (and equivalently for Table,
+Equation, and Code) without editing source. An explicit semantic reference visually replaces only
+its leading `@` with the resolved number and a space, preserving the native Obsidian link text,
+alias, click behavior, and target. If the target is missing, duplicated, cross-file, or lacks a
+visible valid number, the complete source rendering stays unchanged. Composition removes all
+semantic decorations, and plugin cleanup restores every replaced `@`.
 
 <!-- section: accessibility-and-mobile -->
 ## Accessibility and mobile

@@ -1,7 +1,7 @@
 {
   "name": "obsidian-heading-numerals",
-  "version": "0.6.1",
-  "description": "Write, remove, show, or conceal heading numbers in Obsidian.",
+  "version": "0.7.0",
+  "description": "Display or manage heading numbers, virtual captions, and same-file references in Obsidian.",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
@@ -25,7 +25,9 @@
     "plugin",
     "markdown",
     "headings",
-    "numbering"
+    "numbering",
+    "captions",
+    "cross-references"
   ],
   "author": "ZhengYX",
   "license": "MIT",
