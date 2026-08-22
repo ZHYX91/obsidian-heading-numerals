@@ -41,7 +41,10 @@ release problem with a new version.
 3. Run `npm ci` and `npm run release:check` under pinned Node.js/npm.
 4. Use final candidate assets for dated isolated-vault acceptance covering claimed platforms.
 5. Record candidate commit and SHA-256 for all three runtime assets.
-6. Commit intended source, confirm no modified or untracked files, then create the tag.
+6. Commit intended source, confirm no modified or untracked files, then manually run the read-only
+   Release preflight from the current remote default-branch HEAD with the proposed version. The
+   preflight requires the same-version remote tag and Release to be absent.
+7. Create and push the tag only after preflight passes.
 
 Automated gates prove source and candidate contracts only, not real Obsidian or every platform.
 
@@ -60,6 +63,11 @@ dependencies, and canonical gates in a read-only phase. It builds deterministic 
 one identified handoff artifact. A separate write-enabled phase downloads and verifies that exact
 artifact, issues provenance, creates the Release, then downloads every public asset for byte and
 attestation verification.
+
+A failed tag workflow is safely rerunnable. An existing same-tag Release is accepted as a successful
+no-op only when it is stable, immutable, contains exactly the four public assets, matches the current
+candidate byte for byte, and all four provenance records bind the same tag and commit. Any
+difference fails; the workflow never overwrites, edits, or appends same-tag assets.
 
 A failed workflow is not a successful Release. Report publication only after the remote Release
 exists and final verification completes.

@@ -81,9 +81,25 @@ async function regularFile(filePath) {
   return readFile(filePath);
 }
 
-const [command, version, outputArgument] = process.argv.slice(2);
-if (command !== "handoff" || !/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u.test(version ?? "")) {
-  throw new Error("Usage: node scripts/release-assets.mjs handoff <x.y.z> <output-directory>");
+const [command, ...arguments_] = process.argv.slice(2);
+const options = new Map();
+for (let index = 0; index < arguments_.length; index += 2) {
+  const key = arguments_[index];
+  const value = arguments_[index + 1];
+  if (!key?.startsWith("--") || !value || options.has(key)) {
+    throw new Error("Usage: node scripts/release-assets.mjs handoff --version <x.y.z> --output-dir <directory>");
+  }
+  options.set(key, value);
+}
+const version = options.get("--version");
+const outputArgument = options.get("--output-dir");
+if (
+  command !== "handoff" ||
+  options.size !== 2 ||
+  !outputArgument ||
+  !/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u.test(version ?? "")
+) {
+  throw new Error("Usage: node scripts/release-assets.mjs handoff --version <x.y.z> --output-dir <directory>");
 }
 const output = path.resolve(outputArgument ?? "release");
 const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));

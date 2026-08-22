@@ -37,7 +37,9 @@ last_synced: 2026-08-13
 3. 在固定 Node.js/npm 下运行 `npm ci` 和 `npm run release:check`。
 4. 使用最终候选资产在隔离 Vault 中完成所声明平台范围的带日期验收。
 5. 记录候选提交和三个运行时资产的 SHA-256。
-6. 提交预期源码，确认工作树没有未跟踪或未提交文件，再创建 tag。
+6. 提交预期源码，确认工作树没有未跟踪或未提交文件，从当前远端默认分支 HEAD 手动运行只读
+   Release preflight，并输入计划版本；preflight 要求同版本远端 tag 与 Release 尚不存在。
+7. preflight 通过后再创建并推送 tag。
 
 自动门禁通过只证明源码和候选包合约，不得写成真实 Obsidian 或所有平台通过。
 
@@ -54,6 +56,10 @@ last_synced: 2026-08-13
 推送数值 tag 后，GitHub Actions 在只读阶段验证 tag、默认分支祖先关系、固定工具链、依赖和
 标准门禁，生成确定性资产并上传具有明确身份的交接 artifact。独立写权限阶段下载并验证同一
 artifact、签发 provenance、创建 Release，再下载所有公开资产进行字节和 attestation 验证。
+
+失败的 tag workflow 可以安全重跑。既有同 tag Release 只有在稳定、不可变、精确包含四个公共
+资产、与当前候选逐字节一致，且四项 provenance 均绑定同一 tag 和 commit 时，才作为成功
+no-op 接受。任何差异都会失败；workflow 不覆盖、编辑或追加同 tag 资产。
 
 流程失败不等于 Release 成功；只有远端 Release 存在且最终验证完成后，才能报告公开发布。
 
