@@ -1,4 +1,4 @@
-import { Setting } from "obsidian";
+import { Setting, setIcon } from "obsidian";
 
 import { type Translate } from "../config/i18n";
 import { type HeadingNumeralsSettings } from "../config/settings";
@@ -161,19 +161,23 @@ export class SchemeSettingsRenderer {
     const t = this.t;
     const guide = container.createDiv({ cls: "heading-numerals-settings-guide" });
     guide.setAttribute("role", "note");
-    guide.createEl("p", {
-      cls: "heading-numerals-settings-guide-title",
-      text: t("settings.scheme.placeholder.title"),
+    const heading = guide.createDiv({ cls: "heading-numerals-settings-guide-heading" });
+    const icon = heading.createSpan({
+      cls: "heading-numerals-settings-guide-icon",
+      attr: { "aria-hidden": "true" },
     });
-    const syntax = guide.createEl("p");
+    setIcon(icon, "info");
+    heading.createEl("strong", { text: t("settings.scheme.placeholder.title") });
+    const body = guide.createDiv({ cls: "heading-numerals-settings-guide-body" });
+    const syntax = body.createEl("p");
     syntax.append(`${t("settings.scheme.placeholder.syntax")} `);
     syntax.createEl("code", { text: "{1.arabic}" });
-    const example = guide.createEl("p");
+    const example = body.createDiv({ cls: "heading-numerals-settings-guide-example" });
     example.append(`${t("settings.scheme.placeholder.example")} `);
     example.createEl("code", { text: "{2.arabic}" });
     example.append(` → 3 · ${t("settings.scheme.placeholder.explanation")}`);
-    guide.createEl("p", { text: t("settings.scheme.placeholder.formats") });
-    const list = guide.createEl("ul", { cls: "heading-numerals-placeholder-formats" });
+    body.createEl("p", { text: t("settings.scheme.placeholder.formats") });
+    const list = body.createEl("ul", { cls: "heading-numerals-placeholder-formats" });
     for (const format of NUMBER_FORMATS) {
       const item = list.createEl("li");
       item.createEl("code", { text: `{1.${format}}` });

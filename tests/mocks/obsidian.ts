@@ -101,3 +101,5 @@ export class TFolder {
 export function normalizePath(path: string): string {
   return path;
 }
+
+export function setIcon(_element: HTMLElement, _iconId: string): void {}
