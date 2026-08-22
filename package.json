@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-heading-numerals",
+  "name": "obsidian-document-numbering",
   "version": "0.7.0",
   "description": "Display or manage heading numbers, virtual captions, and same-file references in Obsidian.",
   "type": "module",

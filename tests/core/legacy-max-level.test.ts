@@ -5,12 +5,12 @@ import {
   DEFAULT_SETTINGS,
   probeMaxLevelRemoval,
   toNumberingOptions,
-  type HeadingNumeralsSettings,
+  type DocumentNumberingSettings,
 } from "../../src/config/settings";
 import { parseAtxHeadings } from "../../src/core/heading-parser";
 import { numberHeadings } from "../../src/core/numbering-engine";
 
-function labels(source: string, settings: HeadingNumeralsSettings, schemeId?: string): Array<string | null> {
+function labels(source: string, settings: DocumentNumberingSettings, schemeId?: string): Array<string | null> {
   return numberHeadings(
     parseAtxHeadings(source),
     toNumberingOptions(settings, schemeId == null ? {} : { schemeId }),
@@ -60,7 +60,7 @@ describe("legacy maximum heading level", () => {
   });
 
   it("caps a custom scheme selected by a per-note override", () => {
-    const settings: HeadingNumeralsSettings = {
+    const settings: DocumentNumberingSettings = {
       ...DEFAULT_SETTINGS,
       selectedSchemeId: "hierarchical",
       maxLevel: 2,
@@ -81,7 +81,7 @@ describe("legacy maximum heading level", () => {
       }],
     };
     const effective = resolveNoteSettings(settings, parseNoteOverrides({
-      "heading-numerals-scheme": "custom-note",
+      "document-numbering-scheme": "custom-note",
     }));
 
     expect(effective.schemeId).toBe("custom-note");
@@ -93,7 +93,7 @@ describe("legacy maximum heading level", () => {
   });
 
   it("retains original templates for exclusion matching above the legacy cap", () => {
-    const settings: HeadingNumeralsSettings = {
+    const settings: DocumentNumberingSettings = {
       ...DEFAULT_SETTINGS,
       selectedSchemeId: "custom-exclusion-compatibility",
       maxLevel: 2,
@@ -126,7 +126,7 @@ describe("legacy maximum heading level", () => {
   });
 
   it("reports every selectable scheme whose output still depends on the legacy cap", () => {
-    const settings: HeadingNumeralsSettings = {
+    const settings: DocumentNumberingSettings = {
       ...DEFAULT_SETTINGS,
       maxLevel: 2,
       customSchemes: [{
@@ -161,7 +161,7 @@ describe("legacy maximum heading level", () => {
       safeToRemove: true,
     });
 
-    const legacyCustom: HeadingNumeralsSettings = {
+    const legacyCustom: DocumentNumberingSettings = {
       ...DEFAULT_SETTINGS,
       maxLevel: 6,
       customSchemes: [{

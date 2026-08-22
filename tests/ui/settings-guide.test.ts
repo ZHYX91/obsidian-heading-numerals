@@ -13,14 +13,14 @@ describe("settings guide", () => {
 
     expect(source).toContain('guide.setAttribute("role", "note")');
     expect(source).toContain('setIcon(icon, "info")');
-    expect(source).toContain("heading-numerals-settings-guide-heading");
-    expect(source).toContain("heading-numerals-settings-guide-body");
-    expect(source).toContain("heading-numerals-settings-guide-example");
+    expect(source).toContain("document-numbering-settings-guide-heading");
+    expect(source).toContain("document-numbering-settings-guide-body");
+    expect(source).toContain("document-numbering-settings-guide-example");
     expect(styles).toMatch(
-      /\.heading-numerals-settings-guide\s*\{[^}]*border-inline-start:\s*3px solid var\(--interactive-accent\);[^}]*box-shadow:\s*none;[^}]*padding:\s*12px 14px;/s,
+      /\.document-numbering-settings-guide\s*\{[^}]*border-inline-start:\s*3px solid var\(--interactive-accent\);[^}]*box-shadow:\s*none;[^}]*padding:\s*12px 14px;/s,
     );
     expect(styles).toMatch(
-      /\.heading-numerals-settings-guide-body\s*\{[^}]*max-inline-size:\s*68ch;/s,
+      /\.document-numbering-settings-guide-body\s*\{[^}]*max-inline-size:\s*68ch;/s,
     );
   });
 });

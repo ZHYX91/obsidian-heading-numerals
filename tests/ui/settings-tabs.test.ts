@@ -39,7 +39,7 @@ describe("settings tabs", () => {
     expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
     tabs[0]?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     expect(select).toHaveBeenCalledWith("headings");
-    expect(result.panel.getAttribute("aria-labelledby")).toBe("heading-numerals-settings-tab-general");
+    expect(result.panel.getAttribute("aria-labelledby")).toBe("document-numbering-settings-tab-general");
     result.cleanup();
   });
 });

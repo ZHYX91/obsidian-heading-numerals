@@ -19,7 +19,7 @@ import { parseNoteOverrides, resolveNoteSettings, type NoteOverrides } from "../
 import {
   cleanupTemplateSources,
   toNumberingOptions,
-  type HeadingNumeralsSettings,
+  type DocumentNumberingSettings,
 } from "../config/settings";
 import { parseAtxHeadings } from "../core/heading-parser";
 import type { ParsedHeading } from "../core/types";
@@ -93,7 +93,7 @@ function parseOverrides(source: string): NoteOverrides | null {
 export class HeadingDisplayController {
   private readonly views = new Set<EditorView>();
 
-  constructor(private readonly getSettings: () => HeadingNumeralsSettings) {}
+  constructor(private readonly getSettings: () => DocumentNumberingSettings) {}
 
   createExtension(): Extension {
     const views = this.views;

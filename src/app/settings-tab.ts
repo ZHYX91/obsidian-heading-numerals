@@ -11,12 +11,12 @@ import { createTranslator, type Translate } from "../config/i18n";
 import {
   DEFAULT_SETTINGS,
   cloneSettings,
-  type HeadingNumeralsSettings,
+  type DocumentNumberingSettings,
 } from "../config/settings";
 import type { SettingsSaveStatus } from "../config/settings-save-coordinator";
 import { getDeclarativeSettingDefinitions } from "../ui/settings/definitions";
 import { createSettingsTabs, type SettingsTabId } from "../ui/settings/tabs";
-import type HeadingNumeralsPlugin from "./plugin";
+import type DocumentNumberingPlugin from "./plugin";
 import { SchemeSettingsRenderer, selectedSchemeName } from "./scheme-settings-renderer";
 import { parseAtxHeadings } from "../core/heading-parser";
 import type { SettingsImpact } from "./settings-impact";
@@ -57,12 +57,12 @@ class ResetSettingsModal extends Modal {
   }
 }
 
-export class HeadingNumeralsSettingTab extends PluginSettingTab {
+export class DocumentNumberingSettingTab extends PluginSettingTab {
   private activeTab: SettingsTabId = "general";
   private cleanup: (() => void) | null = null;
   private imperativeVisible = false;
 
-  constructor(app: App, private readonly plugin: HeadingNumeralsPlugin) {
+  constructor(app: App, private readonly plugin: DocumentNumberingPlugin) {
     super(app, plugin);
   }
 
@@ -81,7 +81,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       ),
       renderSaveStatus: (setting) => {
         setting.settingEl.empty();
-        setting.settingEl.addClass("heading-numerals-settings-save-row");
+        setting.settingEl.addClass("document-numbering-settings-save-row");
         return this.renderSaveStatus(setting.settingEl, t, true);
       },
       renderSchemes: (container) => this.schemeRenderer(t).renderSchemes(container),
@@ -96,7 +96,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
   }
 
   override async setControlValue(key: string, value: unknown): Promise<void> {
-    if (!isSettingsControlKey(key)) throw new Error(`Unsupported Heading Numerals setting: ${key}`);
+    if (!isSettingsControlKey(key)) throw new Error(`Unsupported Document Numbering setting: ${key}`);
     const mutation = applySettingsControlValue(this.plugin.settings, key, value);
     if (mutation.persistence === "scheduled") {
       this.plugin.scheduleSettings(mutation.settings, mutation.impact);
@@ -108,7 +108,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
 
   private updateControl(key: SettingsControlKey, value: unknown): void {
     void this.setControlValue(key, value).catch((error: unknown) => {
-      console.error(`Heading Numerals: failed to update setting ${key}`, error);
+      console.error(`Document Numbering: failed to update setting ${key}`, error);
     });
   }
 
@@ -138,7 +138,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const settings = this.plugin.settings;
     const t = createTranslator(settings.language);
     containerEl.empty();
-    containerEl.addClass("heading-numerals-settings");
+    containerEl.addClass("document-numbering-settings");
     new Setting(containerEl).setName(t("settings.title")).setHeading();
     const statusCleanup = this.renderSaveStatus(containerEl, t);
     const tabs = [
@@ -152,7 +152,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const layout = createSettingsTabs(containerEl, tabs, this.activeTab, t("settings.tabs.label"), (id) => {
       this.activeTab = id;
       this.display();
-      const target = this.containerEl.querySelector<HTMLElement>(`#heading-numerals-settings-tab-${id}`);
+      const target = this.containerEl.querySelector<HTMLElement>(`#document-numbering-settings-tab-${id}`);
       target?.focus();
     });
     if (this.activeTab === "general") this.renderGeneral(layout.panel, t);
@@ -164,7 +164,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     this.cleanup = () => {
       layout.cleanup();
       statusCleanup();
-      containerEl.removeClass("heading-numerals-settings");
+      containerEl.removeClass("document-numbering-settings");
     };
   }
 
@@ -173,7 +173,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
       void this.plugin.saveSettings(cloneSettings(DEFAULT_SETTINGS), "all")
         .then(() => this.refreshSurface())
         .catch((error: unknown) => {
-          console.error("Heading Numerals: failed to reset settings", error);
+          console.error("Document Numbering: failed to reset settings", error);
         });
     }).open();
   }
@@ -188,7 +188,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
   }
 
   private renderSaveStatus(container: HTMLElement, t: Translate, hideContainer = false): () => void {
-    const row = container.createDiv({ cls: "heading-numerals-settings-save-status" });
+    const row = container.createDiv({ cls: "document-numbering-settings-save-status" });
     const message = row.createSpan();
     const retry = row.createEl("button", { text: t("settings.save.retry") });
     retry.type = "button";
@@ -221,7 +221,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
   }
 
   private commit(
-    update: (settings: HeadingNumeralsSettings) => void,
+    update: (settings: DocumentNumberingSettings) => void,
     impact: SettingsImpact,
     immediate = false,
     rerender = false,
@@ -230,7 +230,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     update(next);
     if (immediate) {
       void this.plugin.saveSettings(next, impact).catch((error: unknown) => {
-        console.error("Heading Numerals: failed to save settings", error);
+        console.error("Document Numbering: failed to save settings", error);
       });
     } else {
       this.plugin.scheduleSettings(next, impact);
@@ -272,7 +272,7 @@ export class HeadingNumeralsSettingTab extends PluginSettingTab {
     const noteOverridesHelp = new Setting(container)
       .setName(t("settings.noteOverrides"))
       .setDesc(t("settings.noteOverrides.desc"));
-    noteOverridesHelp.settingEl.addClass("heading-numerals-note-overrides-help");
+    noteOverridesHelp.settingEl.addClass("document-numbering-note-overrides-help");
     new Setting(container)
       .setName(t("settings.maxLevel"))
       .addSlider((slider) => slider.setLimits(1, 6, 1).setDynamicTooltip()

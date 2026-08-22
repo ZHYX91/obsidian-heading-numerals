@@ -12,7 +12,7 @@ interface TimerHost {
 
 const unavailableTimerHost: TimerHost = {
   setTimeout: () => {
-    throw new Error("Heading Numerals settings saves require a browser window.");
+    throw new Error("Document Numbering settings saves require a browser window.");
   },
   clearTimeout: () => undefined,
 };

@@ -31,17 +31,17 @@ export class ChangePreviewModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this;
     const t = this.options.translate;
-    this.modalEl.addClass("heading-numerals-preview-modal");
+    this.modalEl.addClass("document-numbering-preview-modal");
     titleEl.setText(t(`preview.title.${this.options.operation}`));
-    contentEl.addClass("heading-numerals-preview");
+    contentEl.addClass("document-numbering-preview");
     const changes = this.options.documents.reduce((sum, document) => sum + document.plan.changes.length, 0);
     const warnings = this.options.documents.reduce((sum, document) => sum + document.plan.warnings.length, 0);
     contentEl.createEl("p", {
-      cls: "heading-numerals-preview-summary",
+      cls: "document-numbering-preview-summary",
       text: t("preview.summary", { changes, warnings }),
     });
     contentEl.createEl("p", {
-      cls: "heading-numerals-preview-risk",
+      cls: "document-numbering-preview-risk",
       text: t("preview.warningLinks"),
     });
 
@@ -55,19 +55,19 @@ export class ChangePreviewModal extends Modal {
           break;
         }
         renderedChanges += 1;
-        const card = contentEl.createDiv({ cls: "heading-numerals-change" });
+        const card = contentEl.createDiv({ cls: "document-numbering-change" });
         card.createDiv({
-          cls: "heading-numerals-change-meta",
+          cls: "document-numbering-change-meta",
           text: t("preview.line", { line: change.line + 1, level: change.level }),
         });
         card.createDiv({
-          cls: "heading-numerals-change-rule",
+          cls: "document-numbering-change-rule",
           text: t("preview.rule", { rule: change.ruleId }),
         });
-        const before = card.createDiv({ cls: "heading-numerals-diff heading-numerals-diff-before" });
+        const before = card.createDiv({ cls: "document-numbering-diff document-numbering-diff-before" });
         before.createEl("strong", { text: `${t("preview.before")}: ` });
         before.createEl("code", { text: visibleMarkers(change.before) });
-        const after = card.createDiv({ cls: "heading-numerals-diff heading-numerals-diff-after" });
+        const after = card.createDiv({ cls: "document-numbering-diff document-numbering-diff-after" });
         after.createEl("strong", { text: `${t("preview.after")}: ` });
         after.createEl("code", { text: visibleMarkers(change.after) });
       }
@@ -83,7 +83,7 @@ export class ChangePreviewModal extends Modal {
     ));
     if (warningEntries.length > 0) {
       contentEl.createEl("h3", { text: t("preview.warnings") });
-      const list = contentEl.createEl("ul", { cls: "heading-numerals-warning-list" });
+      const list = contentEl.createEl("ul", { cls: "document-numbering-warning-list" });
       for (const entry of warningEntries.slice(0, 200)) {
         list.createEl("li", {
           text: `${entry.path}:${entry.warning.line + 1} — ${entry.warning.detail}`,
@@ -111,14 +111,14 @@ export class ChangePreviewModal extends Modal {
           .catch((error: unknown) => {
             this.applying = false;
             button.setDisabled(false);
-            console.error("Heading Numerals preview apply failed", error);
+            console.error("Document Numbering preview apply failed", error);
           });
       });
     });
   }
 
   override onClose(): void {
-    this.modalEl.removeClass("heading-numerals-preview-modal");
+    this.modalEl.removeClass("document-numbering-preview-modal");
     this.contentEl.empty();
   }
 }

@@ -1,6 +1,6 @@
 {
-  "id": "heading-numerals",
-  "name": "Heading Numerals",
+  "id": "document-numbering",
+  "name": "Document Numbering",
   "version": "0.7.0",
   "minAppVersion": "1.12.7",
   "description": "Display or manage heading numbers, virtual captions, and same-file references without losing control of Markdown.",

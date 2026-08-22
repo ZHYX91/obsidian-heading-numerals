@@ -7,7 +7,7 @@ export class RecoveryStore {
   private readonly temporaryPath: string;
 
   constructor(private readonly app: App, manifest: PluginManifest) {
-    if (manifest.dir == null) throw new Error("Heading Numerals plugin directory is unavailable.");
+    if (manifest.dir == null) throw new Error("Document Numbering plugin directory is unavailable.");
     this.path = normalizePath(`${manifest.dir}/recovery.json`);
     this.temporaryPath = normalizePath(`${manifest.dir}/recovery.pending.json`);
   }
@@ -18,7 +18,7 @@ export class RecoveryStore {
       try {
         return sanitizeLastBatch(JSON.parse(await this.app.vault.adapter.read(path)));
       } catch (error) {
-        console.error(`Heading Numerals: could not read ${path}`, error);
+        console.error(`Document Numbering: could not read ${path}`, error);
       }
     }
     return null;

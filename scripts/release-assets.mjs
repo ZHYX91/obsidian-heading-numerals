@@ -87,17 +87,17 @@ if (command !== "handoff" || !/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/
 }
 const output = path.resolve(outputArgument ?? "release");
 const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
-if (manifest.id !== "heading-numerals" || manifest.version !== version) {
-  throw new Error("dist/manifest.json does not match the requested Heading Numerals release");
+if (manifest.id !== "document-numbering" || manifest.version !== version) {
+  throw new Error("dist/manifest.json does not match the requested Document Numbering release");
 }
 await mkdir(output, { recursive: true });
 const entries = [];
 for (const name of ASSETS) {
   const content = await regularFile(path.join("dist", name));
   await cp(path.join("dist", name), path.join(output, name), { errorOnExist: true, force: false });
-  entries.push({ name: `heading-numerals/${name}`, content });
+  entries.push({ name: `document-numbering/${name}`, content });
 }
-const archiveName = `heading-numerals-${version}.zip`;
+const archiveName = `document-numbering-${version}.zip`;
 const archive = deterministicZip(entries);
 await writeFile(path.join(output, archiveName), archive, { flag: "wx", mode: 0o644 });
 const checksumLines = await Promise.all([...ASSETS, archiveName].map(async (name) => {

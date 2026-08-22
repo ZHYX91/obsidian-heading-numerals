@@ -14,7 +14,7 @@ describe("virtual numeral element", () => {
     Object.defineProperty(document, "win", { configurable: true, value: window });
     Object.assign(window, { createFragment: () => document.createDocumentFragment() });
     const element = createVirtualNumeralElement(document, "1.2");
-    expect(element.className).toBe("heading-numerals-virtual");
+    expect(element.className).toBe("document-numbering-virtual");
     expect(element.getAttribute("aria-hidden")).toBe("true");
     expect(element.getAttribute("contenteditable")).toBe("false");
     expect(element.firstChild?.textContent).toBe("1.2");

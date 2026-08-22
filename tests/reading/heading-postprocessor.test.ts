@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TFile, type App, type MarkdownPostProcessorContext } from "obsidian";
 
-import { DEFAULT_SETTINGS, type HeadingNumeralsSettings } from "../../src/config/settings";
+import { DEFAULT_SETTINGS, type DocumentNumberingSettings } from "../../src/config/settings";
 import { HeadingReadingProcessor } from "../../src/reading/heading-postprocessor";
 
-function settings(overrides: Partial<HeadingNumeralsSettings>): HeadingNumeralsSettings {
+function settings(overrides: Partial<DocumentNumberingSettings>): DocumentNumberingSettings {
   return {
     ...DEFAULT_SETTINGS,
     customSchemes: DEFAULT_SETTINGS.customSchemes.map((scheme) => ({
@@ -29,7 +29,7 @@ beforeEach(() => {
   Object.assign(window, { createFragment: () => document.createDocumentFragment() });
 });
 
-function harness(source: string, configured: HeadingNumeralsSettings) {
+function harness(source: string, configured: DocumentNumberingSettings) {
   let currentSource = source;
   const FileConstructor = TFile as unknown as new (path: string) => TFile;
   const file = new FileConstructor("note.md");
@@ -77,7 +77,7 @@ describe("HeadingReadingProcessor", () => {
 
     await processor.process(container, context);
 
-    expect(container.querySelectorAll(".heading-numerals-virtual")).toHaveLength(2);
+    expect(container.querySelectorAll(".document-numbering-virtual")).toHaveLength(2);
     expect(container.children[0]?.textContent).toBe("1 First");
     expect(container.children[1]?.textContent).toBe("1.1 Second");
   });
@@ -97,10 +97,10 @@ describe("HeadingReadingProcessor", () => {
 
     await processor.process(container, context);
 
-    const concealed = heading.querySelector(".heading-numerals-concealed");
+    const concealed = heading.querySelector(".document-numbering-concealed");
     expect(concealed?.textContent).toBe("1.1 ");
     expect(heading.textContent).toBe("1.1 Stored");
-    expect(heading.getAttribute("data-heading-numerals-mode")).toBe("conceal");
+    expect(heading.getAttribute("data-document-numbering-mode")).toBe("conceal");
   });
 
   it("fails closed when rendered heading levels do not match source", async () => {
@@ -114,7 +114,7 @@ describe("HeadingReadingProcessor", () => {
 
     await processor.process(container, context);
 
-    expect(container.querySelector(".heading-numerals-virtual")).toBeNull();
+    expect(container.querySelector(".document-numbering-virtual")).toBeNull();
   });
 
   it("reapplies one full-document plan idempotently", async () => {
@@ -128,7 +128,7 @@ describe("HeadingReadingProcessor", () => {
     await processor.process(container, context);
     await processor.process(container, context);
     expect(cachedRead).toHaveBeenCalledTimes(2);
-    expect(container.querySelectorAll(".heading-numerals-virtual")).toHaveLength(2);
+    expect(container.querySelectorAll(".document-numbering-virtual")).toHaveLength(2);
   });
 
   it("cleans prior decorations when display is disabled", async () => {
@@ -138,12 +138,12 @@ describe("HeadingReadingProcessor", () => {
     heading.textContent = "First";
     container.appendChild(heading);
     await processor.process(container, context);
-    expect(heading.querySelector(".heading-numerals-virtual")).not.toBeNull();
+    expect(heading.querySelector(".document-numbering-virtual")).not.toBeNull();
 
     configured.showVirtualNumbers = false;
     await processor.process(container, context);
 
-    expect(heading.querySelector(".heading-numerals-virtual")).toBeNull();
+    expect(heading.querySelector(".document-numbering-virtual")).toBeNull();
     expect(heading.textContent).toBe("First");
   });
 
@@ -182,9 +182,9 @@ describe("HeadingReadingProcessor", () => {
 
     await processor.process(container, context);
 
-    expect(heading.querySelector(".heading-numerals-concealed")?.textContent).toBe("1 ");
-    expect(heading.querySelector(".heading-numerals-virtual")?.textContent).toBe("1 ");
-    expect(heading.getAttribute("data-heading-numerals-mode")).toBe("show-conceal");
+    expect(heading.querySelector(".document-numbering-concealed")?.textContent).toBe("1 ");
+    expect(heading.querySelector(".document-numbering-virtual")?.textContent).toBe("1 ");
+    expect(heading.getAttribute("data-document-numbering-mode")).toBe("show-conceal");
   });
 
   it("uses the selected custom scheme exclusions in Reading View", async () => {
@@ -224,7 +224,7 @@ describe("HeadingReadingProcessor", () => {
     await processor.process(container, context);
 
     expect(Array.from(container.children).map((heading) => (
-      heading.querySelector(".heading-numerals-virtual")?.textContent ?? null
+      heading.querySelector(".document-numbering-virtual")?.textContent ?? null
     ))).toEqual(["1 ", null, null, "1.1 "]);
   });
 
@@ -243,7 +243,7 @@ describe("HeadingReadingProcessor", () => {
 
     expect(first.textContent).toBe("Figure 1: Plain");
     expect(second.textContent).toBe("Figure 2: Target");
-    expect(container.querySelectorAll(".heading-numerals-caption-number")).toHaveLength(2);
+    expect(container.querySelectorAll(".document-numbering-caption-number")).toHaveLength(2);
   });
 
   it("enhances explicit same-file references while preserving the Obsidian link and alias", async () => {
@@ -274,7 +274,7 @@ describe("HeadingReadingProcessor", () => {
     expect(paragraph.textContent).toBe("See 1 chapter");
     expect(paragraph.querySelector("a")?.textContent).toBe("chapter");
     expect(crossFile.textContent).toBe("Cross @Heading");
-    expect(paragraph.querySelector(".heading-numerals-reference-number")?.textContent).toBe("1 ");
+    expect(paragraph.querySelector(".document-numbering-reference-number")?.textContent).toBe("1 ");
     await processor.process(container, context);
     expect(paragraph.textContent).toBe("See 1 chapter");
   });
@@ -298,6 +298,6 @@ describe("HeadingReadingProcessor", () => {
     await processor.process(container, context);
 
     expect(paragraph.textContent).toBe("See @Heading");
-    expect(paragraph.querySelector(".heading-numerals-reference-number")).toBeNull();
+    expect(paragraph.querySelector(".document-numbering-reference-number")).toBeNull();
   });
 });

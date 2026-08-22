@@ -16,7 +16,7 @@ import { applyLegacyMaxLevel, legacyMaxLevelAffectsScheme } from "../core/legacy
 import { inspectSchemeTemplates } from "../core/scheme-template-validation";
 import { BUILT_IN_SCHEMES, isBuiltInSchemeId, resolveScheme } from "../core/schemes";
 
-export interface HeadingNumeralsSettings {
+export interface DocumentNumberingSettings {
   schemaVersion: 5;
   language: "auto" | "en" | "zh";
   showVirtualNumbers: boolean;
@@ -61,7 +61,7 @@ export interface LastBatchSnapshot {
 }
 
 export interface PersistedPluginData {
-  settings: HeadingNumeralsSettings;
+  settings: DocumentNumberingSettings;
   lastBatch: LastBatchSnapshot | null;
 }
 
@@ -81,7 +81,7 @@ export const DEFAULT_CUSTOM_TEMPLATES = [
   "{1.arabic}.{2.arabic}.{3.arabic}.{4.arabic}.{5.arabic}.{6.arabic}",
 ];
 
-export const DEFAULT_SETTINGS: HeadingNumeralsSettings = {
+export const DEFAULT_SETTINGS: DocumentNumberingSettings = {
   schemaVersion: 5,
   language: "auto",
   showVirtualNumbers: false,
@@ -205,7 +205,7 @@ function sanitizeCleanupHistory(value: unknown): CleanupTemplateHistory[] {
   return output;
 }
 
-export function sanitizeSettings(value: unknown): HeadingNumeralsSettings {
+export function sanitizeSettings(value: unknown): DocumentNumberingSettings {
   const raw = isRecord(value) ? value : {};
   const legacySchemaVersion = typeof raw.schemaVersion === "number" ? raw.schemaVersion : 0;
   const legacyDisplayMode = oneOf(raw.displayMode, DISPLAY_MODES, "normal");
@@ -337,7 +337,7 @@ export function sanitizePluginData(value: unknown): PersistedPluginData {
   };
 }
 
-export function cloneSettings(settings: HeadingNumeralsSettings): HeadingNumeralsSettings {
+export function cloneSettings(settings: DocumentNumberingSettings): DocumentNumberingSettings {
   return {
     ...settings,
     customSchemes: settings.customSchemes.map((scheme) => ({
@@ -355,7 +355,7 @@ export function cloneSettings(settings: HeadingNumeralsSettings): HeadingNumeral
 }
 
 export function toNumberingOptions(
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   overrides: Readonly<{
     schemeId?: SchemeId;
     starts?: Readonly<Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>>>;
@@ -369,7 +369,7 @@ export function toNumberingOptions(
   };
 }
 
-export function probeMaxLevelRemoval(settings: HeadingNumeralsSettings): MaxLevelRemovalProbe {
+export function probeMaxLevelRemoval(settings: DocumentNumberingSettings): MaxLevelRemovalProbe {
   const schemes = [...Object.values(BUILT_IN_SCHEMES), ...settings.customSchemes];
   const affectedSchemeIds = schemes
     .filter((scheme) => legacyMaxLevelAffectsScheme(scheme, settings.maxLevel))
@@ -385,7 +385,7 @@ export function probeMaxLevelRemoval(settings: HeadingNumeralsSettings): MaxLeve
   };
 }
 
-export function cleanupTemplateSources(settings: HeadingNumeralsSettings): CleanupTemplateSource[] {
+export function cleanupTemplateSources(settings: DocumentNumberingSettings): CleanupTemplateSource[] {
   const sources: CleanupTemplateSource[] = Object.values(BUILT_IN_SCHEMES).map((scheme) => ({
     schemeId: scheme.id,
     schemeName: scheme.id,

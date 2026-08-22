@@ -1,4 +1,4 @@
-import type { HeadingNumeralsSettings } from "../config/settings";
+import type { DocumentNumberingSettings } from "../config/settings";
 import {
   DISPLAY_MODES,
   displayModeToPreferences,
@@ -7,14 +7,14 @@ import {
 import { isBuiltInSchemeId } from "../core/schemes";
 
 export const NOTE_OVERRIDE_KEYS = [
-  "heading-numerals",
-  "heading-numerals-ignore",
-  "heading-numerals-show-virtual",
-  "heading-numerals-conceal-stored",
-  "heading-numerals-scheme",
-  "heading-numerals-clean-scope",
-  "heading-numerals-clean-confidence",
-  "heading-numerals-start",
+  "document-numbering",
+  "document-numbering-ignore",
+  "document-numbering-show-virtual",
+  "document-numbering-conceal-stored",
+  "document-numbering-scheme",
+  "document-numbering-clean-scope",
+  "document-numbering-clean-confidence",
+  "document-numbering-start",
 ] as const;
 
 export type TriState = "inherit" | "on" | "off";
@@ -44,7 +44,7 @@ function hasOwn(values: Readonly<Record<string, unknown>>, key: string): boolean
 }
 
 function legacyMode(values: Readonly<Record<string, unknown>>): DisplayMode | null {
-  const value = values["heading-numerals"];
+  const value = values["document-numbering"];
   return typeof value === "string" && DISPLAY_MODES.includes(value as DisplayMode)
     ? value as DisplayMode
     : null;
@@ -60,21 +60,21 @@ function stateValue(value: TriState, fallback: boolean): boolean {
 
 export function readNoteControlSnapshot(
   values: Readonly<Record<string, unknown>>,
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
 ): NoteControlSnapshot {
   const legacy = legacyMode(values);
   const legacyPreferences = legacy == null ? null : displayModeToPreferences(legacy);
-  const showVirtual = explicitTriState(values["heading-numerals-show-virtual"])
+  const showVirtual = explicitTriState(values["document-numbering-show-virtual"])
     ?? (legacyPreferences == null ? "inherit" : legacyPreferences.showVirtualNumbers ? "on" : "off");
-  const concealStored = explicitTriState(values["heading-numerals-conceal-stored"])
+  const concealStored = explicitTriState(values["document-numbering-conceal-stored"])
     ?? (legacyPreferences == null ? "inherit" : legacyPreferences.concealStoredNumbers ? "on" : "off");
-  const rawScheme = values["heading-numerals-scheme"];
+  const rawScheme = values["document-numbering-scheme"];
   const schemeId = typeof rawScheme === "string" && rawScheme.length > 0 ? rawScheme : null;
   const schemeExists = schemeId != null && (
     settings.customSchemes.some((scheme) => scheme.id === schemeId)
     || isBuiltInSchemeId(schemeId)
   );
-  const ignore = values["heading-numerals-ignore"] === true || values["heading-numerals"] === "off";
+  const ignore = values["document-numbering-ignore"] === true || values["document-numbering"] === "off";
 
   return {
     showVirtual,
@@ -85,7 +85,7 @@ export function readNoteControlSnapshot(
     effectiveConcealStored: stateValue(concealStored, settings.concealStoredNumbers),
     effectiveSchemeId: schemeExists && schemeId != null ? schemeId : settings.selectedSchemeId,
     effectiveIgnore: ignore,
-    usesLegacyDisplayProperty: legacy != null || values["heading-numerals"] === "off",
+    usesLegacyDisplayProperty: legacy != null || values["document-numbering"] === "off",
     hasAnyOverride: NOTE_OVERRIDE_KEYS.some((key) => hasOwn(values, key)),
   };
 }
@@ -107,31 +107,31 @@ function migrateLegacyDisplay(values: Record<string, unknown>, editedKey: string
   let changed = false;
   if (legacy != null) {
     const preferences = displayModeToPreferences(legacy);
-    const otherKey = editedKey === "heading-numerals-show-virtual"
-      ? "heading-numerals-conceal-stored"
-      : "heading-numerals-show-virtual";
+    const otherKey = editedKey === "document-numbering-show-virtual"
+      ? "document-numbering-conceal-stored"
+      : "document-numbering-show-virtual";
     if (!hasOwn(values, otherKey)) {
       changed = assign(
         values,
         otherKey,
-        otherKey === "heading-numerals-show-virtual"
+        otherKey === "document-numbering-show-virtual"
           ? preferences.showVirtualNumbers
           : preferences.concealStoredNumbers,
       ) || changed;
     }
-    changed = remove(values, "heading-numerals") || changed;
-  } else if (values["heading-numerals"] === "off") {
-    changed = assign(values, "heading-numerals-ignore", true) || changed;
-    changed = remove(values, "heading-numerals") || changed;
-  } else if (values["heading-numerals"] === "inherit") {
-    changed = remove(values, "heading-numerals") || changed;
+    changed = remove(values, "document-numbering") || changed;
+  } else if (values["document-numbering"] === "off") {
+    changed = assign(values, "document-numbering-ignore", true) || changed;
+    changed = remove(values, "document-numbering") || changed;
+  } else if (values["document-numbering"] === "inherit") {
+    changed = remove(values, "document-numbering") || changed;
   }
   return changed;
 }
 
 function applyTriState(
   values: Record<string, unknown>,
-  key: "heading-numerals-show-virtual" | "heading-numerals-conceal-stored",
+  key: "document-numbering-show-virtual" | "document-numbering-conceal-stored",
   value: TriState,
 ): boolean {
   let changed = migrateLegacyDisplay(values, key);
@@ -147,19 +147,19 @@ export function applyNoteOverrideChange(
 ): boolean {
   switch (change.kind) {
     case "show-virtual":
-      return applyTriState(values, "heading-numerals-show-virtual", change.value);
+      return applyTriState(values, "document-numbering-show-virtual", change.value);
     case "conceal-stored":
-      return applyTriState(values, "heading-numerals-conceal-stored", change.value);
+      return applyTriState(values, "document-numbering-conceal-stored", change.value);
     case "scheme":
       return change.value == null
-        ? remove(values, "heading-numerals-scheme")
-        : assign(values, "heading-numerals-scheme", change.value);
+        ? remove(values, "document-numbering-scheme")
+        : assign(values, "document-numbering-scheme", change.value);
     case "ignore": {
       let changed = change.value
-        ? assign(values, "heading-numerals-ignore", true)
-        : remove(values, "heading-numerals-ignore");
-      if (values["heading-numerals"] === "off") {
-        changed = remove(values, "heading-numerals") || changed;
+        ? assign(values, "document-numbering-ignore", true)
+        : remove(values, "document-numbering-ignore");
+      if (values["document-numbering"] === "off") {
+        changed = remove(values, "document-numbering") || changed;
       }
       return changed;
     }

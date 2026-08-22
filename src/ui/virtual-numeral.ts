@@ -1,4 +1,4 @@
-export const VIRTUAL_NUMERAL_CLASS = "heading-numerals-virtual";
+export const VIRTUAL_NUMERAL_CLASS = "document-numbering-virtual";
 export const VIRTUAL_NUMERAL_SELECTOR = `.${VIRTUAL_NUMERAL_CLASS}`;
 
 interface ObsidianWindow extends Window {
@@ -25,7 +25,7 @@ export function createVirtualSemanticElement(
 ): HTMLSpanElement {
   const fragment = (ownerDocument.win as ObsidianWindow).createFragment();
   const element = fragment.createSpan();
-  element.className = `${VIRTUAL_NUMERAL_CLASS} heading-numerals-${kind}-number`;
+  element.className = `${VIRTUAL_NUMERAL_CLASS} document-numbering-${kind}-number`;
   element.textContent = kind === "caption" ? ` ${label}` : `${label} `;
   element.setAttribute("aria-hidden", "true");
   element.setAttribute("contenteditable", "false");

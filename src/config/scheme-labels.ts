@@ -1,5 +1,5 @@
 import type { Translate } from "./i18n";
-import type { HeadingNumeralsSettings } from "./settings";
+import type { DocumentNumberingSettings } from "./settings";
 import { isBuiltInSchemeId } from "../core/schemes";
 import { BUILT_IN_SCHEME_IDS, type CustomNumberingScheme } from "../core/types";
 
@@ -9,7 +9,7 @@ function isLegacyMigratedScheme(scheme: CustomNumberingScheme): boolean {
 
 export function schemeDisplayName(
   id: string,
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   t: Translate,
 ): string {
   if (isBuiltInSchemeId(id)) return t(`scheme.${id}`);
@@ -19,7 +19,7 @@ export function schemeDisplayName(
 }
 
 export function noteSchemeOptions(
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   currentId: string | null,
   t: Translate,
 ): ReadonlyArray<readonly [string, string]> {

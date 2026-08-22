@@ -2,7 +2,7 @@ import { App, MarkdownView, Notice, TFile, type TFolder } from "obsidian";
 
 import type { Translate } from "../config/i18n";
 import type {
-  HeadingNumeralsSettings,
+  DocumentNumberingSettings,
   LastBatchSnapshot,
 } from "../config/settings";
 import type { TransformOperation } from "../core/types";
@@ -32,7 +32,7 @@ function snapshotSizeBytes(snapshot: LastBatchSnapshot): number {
 export class BatchController {
   constructor(
     private readonly app: App,
-    private readonly getSettings: () => HeadingNumeralsSettings,
+    private readonly getSettings: () => DocumentNumberingSettings,
     private readonly persistence: BatchPersistence,
   ) {}
 
@@ -41,7 +41,7 @@ export class BatchController {
       const files = this.filesForScope(scope);
       new BatchOperationModal(this.app, translate, files.length, (operation) => {
         void this.preview(scope, operation, translate).catch((error: unknown) => {
-          console.error("Heading Numerals batch preview failed", error);
+          console.error("Document Numbering batch preview failed", error);
           new Notice(translate("notice.batchFailed"));
         });
       }).open();
@@ -83,14 +83,14 @@ export class BatchController {
       await this.persistence.setLastBatch(null);
       new Notice(translate("notice.undoDone", { count: restored.length }));
     } catch (error) {
-      console.error("Heading Numerals batch restore failed", error);
+      console.error("Document Numbering batch restore failed", error);
       const rollbackFailures = await rollbackExactly(this.app.vault, restored.map((item) => ({
         target: item.file,
         before: item.after,
         after: item.before,
       })));
       for (const rollbackError of rollbackFailures) {
-        console.error("Heading Numerals restore rollback failed", rollbackError);
+        console.error("Document Numbering restore rollback failed", rollbackError);
       }
       new Notice(translate("notice.batchFailed"));
     }
@@ -193,20 +193,20 @@ export class BatchController {
       await this.persistence.setLastBatch(snapshot);
       new Notice(translate("notice.batchApplied", { count: modified.length }));
     } catch (error) {
-      console.error("Heading Numerals batch failed", error);
+      console.error("Document Numbering batch failed", error);
       const rollbackFailures = await rollbackExactly(this.app.vault, modified.map((item) => ({
         target: item.file,
         before: item.before,
         after: item.after,
       })));
       for (const rollbackError of rollbackFailures) {
-        console.error("Heading Numerals batch rollback failed", rollbackError);
+        console.error("Document Numbering batch rollback failed", rollbackError);
       }
       if (rollbackFailures.length === 0) {
         try {
           await this.persistence.setLastBatch(null);
         } catch (persistenceError) {
-          console.error("Heading Numerals could not clear the recovery snapshot", persistenceError);
+          console.error("Document Numbering could not clear the recovery snapshot", persistenceError);
         }
       }
       new Notice(translate("notice.batchFailed"));

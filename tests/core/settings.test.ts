@@ -26,10 +26,10 @@ describe("settings", () => {
 
   it("parses and resolves per-note overrides", () => {
     const overrides = parseNoteOverrides({
-      "heading-numerals": "conceal",
-      "heading-numerals-scheme": "legal",
-      "heading-numerals-clean-confidence": "medium",
-      "heading-numerals-start": { h2: 3, h7: 9 },
+      "document-numbering": "conceal",
+      "document-numbering-scheme": "legal",
+      "document-numbering-clean-confidence": "medium",
+      "document-numbering-start": { h2: 3, h7: 9 },
     });
     expect(resolveNoteSettings(DEFAULT_SETTINGS, overrides)).toMatchObject({
       disabled: false,
@@ -42,8 +42,8 @@ describe("settings", () => {
   });
 
   it("treats off and ignore as a full opt-out", () => {
-    expect(parseNoteOverrides({ "heading-numerals": "off" }).disabled).toBe(true);
-    expect(parseNoteOverrides({ "heading-numerals-ignore": true }).disabled).toBe(true);
+    expect(parseNoteOverrides({ "document-numbering": "off" }).disabled).toBe(true);
+    expect(parseNoteOverrides({ "document-numbering-ignore": true }).disabled).toBe(true);
   });
 
   it("migrates legacy modes and supports independent persisted display preferences", () => {
@@ -81,7 +81,7 @@ describe("settings", () => {
 
   it("accepts the combined legacy frontmatter mode and explicit per-feature overrides", () => {
     expect(resolveNoteSettings(DEFAULT_SETTINGS, parseNoteOverrides({
-      "heading-numerals": "show-conceal",
+      "document-numbering": "show-conceal",
     }))).toMatchObject({
       showVirtualNumbers: true,
       concealStoredNumbers: true,
@@ -91,9 +91,9 @@ describe("settings", () => {
       showVirtualNumbers: true,
       concealStoredNumbers: false,
     }, parseNoteOverrides({
-      "heading-numerals": "show",
-      "heading-numerals-show-virtual": false,
-      "heading-numerals-conceal-stored": true,
+      "document-numbering": "show",
+      "document-numbering-show-virtual": false,
+      "document-numbering-conceal-stored": true,
     }))).toMatchObject({
       showVirtualNumbers: false,
       concealStoredNumbers: true,

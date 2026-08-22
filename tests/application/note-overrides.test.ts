@@ -32,8 +32,8 @@ describe("current note overrides", () => {
     expect(applyNoteOverrideChange(values, { kind: "conceal-stored", value: "off" })).toBe(true);
 
     expect(values).toEqual({
-      "heading-numerals-show-virtual": true,
-      "heading-numerals-conceal-stored": false,
+      "document-numbering-show-virtual": true,
+      "document-numbering-conceal-stored": false,
     });
     expect(readNoteControlSnapshot(values, DEFAULT_SETTINGS)).toMatchObject({
       showVirtual: "on",
@@ -45,7 +45,7 @@ describe("current note overrides", () => {
 
   it("deletes a property when its control returns to follow global", () => {
     const values = {
-      "heading-numerals-show-virtual": false,
+      "document-numbering-show-virtual": false,
       unrelated: "kept",
     } as Record<string, unknown>;
 
@@ -54,7 +54,7 @@ describe("current note overrides", () => {
   });
 
   it("migrates a legacy combined mode while preserving the unedited effect", () => {
-    const values = { "heading-numerals": "show-conceal" } as Record<string, unknown>;
+    const values = { "document-numbering": "show-conceal" } as Record<string, unknown>;
 
     expect(readNoteControlSnapshot(values, DEFAULT_SETTINGS)).toMatchObject({
       showVirtual: "on",
@@ -64,42 +64,42 @@ describe("current note overrides", () => {
 
     applyNoteOverrideChange(values, { kind: "show-virtual", value: "inherit" });
 
-    expect(values).toEqual({ "heading-numerals-conceal-stored": true });
+    expect(values).toEqual({ "document-numbering-conceal-stored": true });
   });
 
   it("preserves an existing explicit counterpart while migrating legacy display", () => {
     const values = {
-      "heading-numerals": "show",
-      "heading-numerals-show-virtual": false,
+      "document-numbering": "show",
+      "document-numbering-show-virtual": false,
     } as Record<string, unknown>;
 
     applyNoteOverrideChange(values, { kind: "conceal-stored", value: "on" });
 
     expect(values).toEqual({
-      "heading-numerals-show-virtual": false,
-      "heading-numerals-conceal-stored": true,
+      "document-numbering-show-virtual": false,
+      "document-numbering-conceal-stored": true,
     });
   });
 
   it("removes the legacy inherit sentinel when an independent value is chosen", () => {
-    const values = { "heading-numerals": "inherit" } as Record<string, unknown>;
+    const values = { "document-numbering": "inherit" } as Record<string, unknown>;
     applyNoteOverrideChange(values, { kind: "conceal-stored", value: "off" });
-    expect(values).toEqual({ "heading-numerals-conceal-stored": false });
+    expect(values).toEqual({ "document-numbering-conceal-stored": false });
   });
 
   it("migrates legacy off into ignore before changing an independent effect", () => {
-    const values = { "heading-numerals": "off" } as Record<string, unknown>;
+    const values = { "document-numbering": "off" } as Record<string, unknown>;
 
     applyNoteOverrideChange(values, { kind: "show-virtual", value: "on" });
 
     expect(values).toEqual({
-      "heading-numerals-ignore": true,
-      "heading-numerals-show-virtual": true,
+      "document-numbering-ignore": true,
+      "document-numbering-show-virtual": true,
     });
   });
 
   it("turns off legacy ignore by deleting its property instead of writing false", () => {
-    const values = { "heading-numerals": "off" } as Record<string, unknown>;
+    const values = { "document-numbering": "off" } as Record<string, unknown>;
 
     expect(applyNoteOverrideChange(values, { kind: "ignore", value: false })).toBe(true);
     expect(values).toEqual({});
@@ -109,20 +109,20 @@ describe("current note overrides", () => {
     const values: Record<string, unknown> = {};
     expect(applyNoteOverrideChange(values, { kind: "ignore", value: true })).toBe(true);
     expect(applyNoteOverrideChange(values, { kind: "ignore", value: true })).toBe(false);
-    expect(values).toEqual({ "heading-numerals-ignore": true });
+    expect(values).toEqual({ "document-numbering-ignore": true });
   });
 
   it("uses only selectable scheme IDs and restores inheritance by deletion", () => {
     const values: Record<string, unknown> = {};
     applyNoteOverrideChange(values, { kind: "scheme", value: "legal" });
-    expect(values).toEqual({ "heading-numerals-scheme": "legal" });
+    expect(values).toEqual({ "document-numbering-scheme": "legal" });
     applyNoteOverrideChange(values, { kind: "scheme", value: null });
     expect(values).toEqual({});
   });
 
   it("falls back to the global scheme when a stored scheme is unavailable", () => {
     const snapshot = readNoteControlSnapshot(
-      { "heading-numerals-scheme": "missing-scheme" },
+      { "document-numbering-scheme": "missing-scheme" },
       DEFAULT_SETTINGS,
     );
     expect(snapshot.schemeId).toBe("missing-scheme");
@@ -142,7 +142,7 @@ describe("current note overrides", () => {
       }],
     };
     const snapshot = readNoteControlSnapshot(
-      { "heading-numerals-scheme": "custom-one" },
+      { "document-numbering-scheme": "custom-one" },
       settings,
     );
     expect(snapshot.effectiveSchemeId).toBe("custom-one");

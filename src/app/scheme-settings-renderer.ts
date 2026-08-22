@@ -1,7 +1,7 @@
 import { Setting, setIcon } from "obsidian";
 
 import { type Translate } from "../config/i18n";
-import { type HeadingNumeralsSettings } from "../config/settings";
+import { type DocumentNumberingSettings } from "../config/settings";
 import {
   BUILT_IN_SCHEMES,
   findMatchingBuiltInSchemeId,
@@ -26,7 +26,7 @@ type EditableScheme = Omit<CustomNumberingScheme, "templates" | "exclusions"> & 
 };
 
 type SchemeCommit = (
-  update: (settings: HeadingNumeralsSettings) => void,
+  update: (settings: DocumentNumberingSettings) => void,
   impact: SettingsImpact,
   immediate?: boolean,
   rerender?: boolean,
@@ -44,7 +44,7 @@ function customSchemeName(scheme: CustomNumberingScheme, t: Translate): string {
   return isLegacyMigratedScheme(scheme) ? t("settings.scheme.migrated") : scheme.name;
 }
 
-function newCustomId(settings: HeadingNumeralsSettings): string {
+function newCustomId(settings: DocumentNumberingSettings): string {
   const prefix = `custom-${Date.now().toString(36)}`;
   let id = prefix;
   let suffix = 1;
@@ -55,7 +55,7 @@ function newCustomId(settings: HeadingNumeralsSettings): string {
   return id;
 }
 
-function archiveScheme(settings: HeadingNumeralsSettings, scheme: CustomNumberingScheme): void {
+function archiveScheme(settings: DocumentNumberingSettings, scheme: CustomNumberingScheme): void {
   const key = `${scheme.id}@${scheme.revision}`;
   if (settings.cleanupHistory.some((entry) => `${entry.schemeId}@${entry.revision}` === key)) return;
   settings.cleanupHistory.push({
@@ -67,7 +67,7 @@ function archiveScheme(settings: HeadingNumeralsSettings, scheme: CustomNumberin
   });
 }
 
-export function firstAvailableScheme(settings: HeadingNumeralsSettings, excluding?: string): string {
+export function firstAvailableScheme(settings: DocumentNumberingSettings, excluding?: string): string {
   const custom = settings.customSchemes.find((scheme) => scheme.id !== excluding);
   if (custom != null) return custom.id;
   const builtIn = BUILT_IN_SCHEME_IDS.find((id) => (
@@ -79,7 +79,7 @@ export function firstAvailableScheme(settings: HeadingNumeralsSettings, excludin
   return "hierarchical-h2";
 }
 
-export function selectedSchemeName(settings: HeadingNumeralsSettings, t: Translate): string {
+export function selectedSchemeName(settings: DocumentNumberingSettings, t: Translate): string {
   if (isBuiltInSchemeId(settings.selectedSchemeId)) return builtInName(settings.selectedSchemeId, t);
   const custom = settings.customSchemes.find((scheme) => scheme.id === settings.selectedSchemeId);
   return custom == null ? settings.selectedSchemeId : customSchemeName(custom, t);
@@ -87,7 +87,7 @@ export function selectedSchemeName(settings: HeadingNumeralsSettings, t: Transla
 
 export class SchemeSettingsRenderer {
   constructor(
-    private readonly getSettings: () => HeadingNumeralsSettings,
+    private readonly getSettings: () => DocumentNumberingSettings,
     private readonly commit: SchemeCommit,
     private readonly t: Translate,
     private readonly getActiveHeadings: () => readonly ParsedHeading[] = () => [],
@@ -159,25 +159,25 @@ export class SchemeSettingsRenderer {
 
   private renderPlaceholderHelp(container: HTMLElement): void {
     const t = this.t;
-    const guide = container.createDiv({ cls: "heading-numerals-settings-guide" });
+    const guide = container.createDiv({ cls: "document-numbering-settings-guide" });
     guide.setAttribute("role", "note");
-    const heading = guide.createDiv({ cls: "heading-numerals-settings-guide-heading" });
+    const heading = guide.createDiv({ cls: "document-numbering-settings-guide-heading" });
     const icon = heading.createSpan({
-      cls: "heading-numerals-settings-guide-icon",
+      cls: "document-numbering-settings-guide-icon",
       attr: { "aria-hidden": "true" },
     });
     setIcon(icon, "info");
     heading.createEl("strong", { text: t("settings.scheme.placeholder.title") });
-    const body = guide.createDiv({ cls: "heading-numerals-settings-guide-body" });
+    const body = guide.createDiv({ cls: "document-numbering-settings-guide-body" });
     const syntax = body.createEl("p");
     syntax.append(`${t("settings.scheme.placeholder.syntax")} `);
     syntax.createEl("code", { text: "{1.arabic}" });
-    const example = body.createDiv({ cls: "heading-numerals-settings-guide-example" });
+    const example = body.createDiv({ cls: "document-numbering-settings-guide-example" });
     example.append(`${t("settings.scheme.placeholder.example")} `);
     example.createEl("code", { text: "{2.arabic}" });
     example.append(` → 3 · ${t("settings.scheme.placeholder.explanation")}`);
     body.createEl("p", { text: t("settings.scheme.placeholder.formats") });
-    const list = body.createEl("ul", { cls: "heading-numerals-placeholder-formats" });
+    const list = body.createEl("ul", { cls: "document-numbering-placeholder-formats" });
     for (const format of NUMBER_FORMATS) {
       const item = list.createEl("li");
       item.createEl("code", { text: `{1.${format}}` });
@@ -188,11 +188,11 @@ export class SchemeSettingsRenderer {
   private renderBuiltInScheme(container: HTMLElement, id: typeof BUILT_IN_SCHEME_IDS[number]): void {
     const t = this.t;
     const scheme = BUILT_IN_SCHEMES[id];
-    const details = container.createEl("details", { cls: "heading-numerals-scheme-card" });
+    const details = container.createEl("details", { cls: "document-numbering-scheme-card" });
     details.createEl("summary", { text: `${builtInName(id, t)} · ${t("settings.scheme.builtin")}` });
     this.renderReadOnlyTemplates(details, scheme.templates);
     const actions = new Setting(details);
-    actions.settingEl.addClass("heading-numerals-scheme-actions");
+    actions.settingEl.addClass("document-numbering-scheme-actions");
     actions
       .addButton((button) => button.setButtonText(t("settings.scheme.copy")).onClick(() => {
         this.commit((settings) => {
@@ -209,7 +209,7 @@ export class SchemeSettingsRenderer {
         }, "display", true, true);
       }))
       .addButton((button) => {
-        button.buttonEl.addClass("heading-numerals-scheme-remove");
+        button.buttonEl.addClass("document-numbering-scheme-remove");
         return button.setButtonText(t("settings.scheme.hide")).onClick(() => {
           this.commit((settings) => {
             if (!settings.hiddenBuiltInSchemeIds.includes(id)) settings.hiddenBuiltInSchemeIds.push(id);
@@ -221,18 +221,18 @@ export class SchemeSettingsRenderer {
 
   private renderReadOnlyTemplates(container: HTMLElement, templates: readonly string[]): void {
     const t = this.t;
-    const list = container.createDiv({ cls: "heading-numerals-readonly-templates" });
+    const list = container.createDiv({ cls: "document-numbering-readonly-templates" });
     for (let index = 0; index < 6; index += 1) {
       const template = templates[index] ?? "";
-      const row = list.createDiv({ cls: "heading-numerals-readonly-template" });
-      row.createSpan({ cls: "heading-numerals-readonly-level", text: `H${index + 1}` });
-      const body = row.createDiv({ cls: "heading-numerals-readonly-template-body" });
+      const row = list.createDiv({ cls: "document-numbering-readonly-template" });
+      row.createSpan({ cls: "document-numbering-readonly-level", text: `H${index + 1}` });
+      const body = row.createDiv({ cls: "document-numbering-readonly-template-body" });
       if (template.length === 0) {
-        body.createSpan({ cls: "heading-numerals-readonly-disabled", text: t("settings.scheme.disabled") });
+        body.createSpan({ cls: "document-numbering-readonly-disabled", text: t("settings.scheme.disabled") });
       } else {
         body.createEl("code", { text: template });
         body.createSpan({
-          cls: "heading-numerals-readonly-preview",
+          cls: "document-numbering-readonly-preview",
           text: `→ ${renderTemplate(template, PREVIEW_COUNTERS)}`,
         });
       }
@@ -241,13 +241,13 @@ export class SchemeSettingsRenderer {
 
   private renderCustomScheme(container: HTMLElement, scheme: CustomNumberingScheme): void {
     const t = this.t;
-    const details = container.createEl("details", { cls: "heading-numerals-scheme-card" });
+    const details = container.createEl("details", { cls: "document-numbering-scheme-card" });
     details.open = this.getSettings().selectedSchemeId === scheme.id;
     const displayName = customSchemeName(scheme, t);
     details.createEl("summary", { text: `${displayName} · ${t("settings.scheme.custom")}` });
     const matchingBuiltInId = findMatchingBuiltInSchemeId(scheme);
     if (isLegacyMigratedScheme(scheme) || matchingBuiltInId != null) {
-      const note = details.createDiv({ cls: "heading-numerals-scheme-note" });
+      const note = details.createDiv({ cls: "document-numbering-scheme-note" });
       note.setAttribute("role", "note");
       if (isLegacyMigratedScheme(scheme)) {
         note.createEl("p", { text: t("settings.scheme.migrated.desc") });
@@ -273,7 +273,7 @@ export class SchemeSettingsRenderer {
         draft.baseLevel = Number(value);
       });
     });
-    const validation = details.createDiv({ cls: "heading-numerals-template-validation" });
+    const validation = details.createDiv({ cls: "document-numbering-template-validation" });
     validation.setAttribute("role", "alert");
     const previewElements: HTMLElement[] = [];
     const updateValidation = (): boolean => {
@@ -294,7 +294,7 @@ export class SchemeSettingsRenderer {
       return !invalidTemplate && !invalidExclusions && draft.name.trim().length > 0;
     };
     for (let index = 0; index < 6; index += 1) {
-      const preview = details.createDiv({ cls: "heading-numerals-template-preview" });
+      const preview = details.createDiv({ cls: "document-numbering-template-preview" });
       previewElements.push(preview);
       new Setting(details).setName(`H${index + 1}`).addText((text) => text
         .setValue(draft.templates[index] ?? "")
@@ -307,9 +307,9 @@ export class SchemeSettingsRenderer {
       .setName(t("settings.scheme.exclusions"))
       .setDesc(t("settings.scheme.exclusions.desc"))
       .setHeading();
-    const exclusionList = details.createDiv({ cls: "heading-numerals-exclusion-list" });
+    const exclusionList = details.createDiv({ cls: "document-numbering-exclusion-list" });
     const exclusionPreview = details.createEl("p", {
-      cls: "setting-item-description heading-numerals-exclusion-preview",
+      cls: "setting-item-description document-numbering-exclusion-preview",
     });
     const updateExclusionPreview = (): void => {
       const matches = this.getActiveHeadings().filter((heading) => matchHeadingExclusion(heading, draft) != null);

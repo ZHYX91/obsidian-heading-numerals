@@ -45,7 +45,7 @@ jobs:
         with:
           compression-level: 0
           if-no-files-found: error
-          name: heading-numerals-production-${{ github.sha }}
+          name: document-numbering-production-${{ github.sha }}
           overwrite: false
           path: |
             dist/main.js

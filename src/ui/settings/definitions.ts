@@ -119,7 +119,7 @@ function headingDefinitions(
       name: t("settings.noteOverrides"),
       desc: t("settings.noteOverrides.desc"),
       render: (setting) => {
-        setting.settingEl.addClass("heading-numerals-note-overrides-help");
+        setting.settingEl.addClass("document-numbering-note-overrides-help");
       },
     },
     {
@@ -243,8 +243,8 @@ function customDefinition(
     searchable: false,
     render: (setting) => {
       setting.settingEl.empty();
-      setting.settingEl.addClass("heading-numerals-settings-custom-row");
-      const body = setting.settingEl.createDiv({ cls: "heading-numerals-settings-custom-body" });
+      setting.settingEl.addClass("document-numbering-settings-custom-row");
+      const body = setting.settingEl.createDiv({ cls: "document-numbering-settings-custom-body" });
       render(body);
       return () => body.remove();
     },

@@ -1,4 +1,4 @@
-import type { HeadingNumeralsSettings } from "./settings";
+import type { DocumentNumberingSettings } from "./settings";
 import {
   DISPLAY_MODES,
   displayModeToPreferences,
@@ -51,32 +51,32 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
   if (data == null) {
     return { ...EMPTY_OVERRIDES, starts: {} };
   }
-  const modeValue = data["heading-numerals"];
-  const ignore = data["heading-numerals-ignore"] === true || modeValue === "off";
+  const modeValue = data["document-numbering"];
+  const ignore = data["document-numbering-ignore"] === true || modeValue === "off";
   const displayMode = typeof modeValue === "string" && DISPLAY_MODES.includes(modeValue as DisplayMode)
     ? modeValue as DisplayMode
     : null;
   const legacyDisplay = displayMode == null ? null : displayModeToPreferences(displayMode);
-  const showValue = data["heading-numerals-show-virtual"];
-  const concealValue = data["heading-numerals-conceal-stored"];
+  const showValue = data["document-numbering-show-virtual"];
+  const concealValue = data["document-numbering-conceal-stored"];
   const showVirtualNumbers = typeof showValue === "boolean"
     ? showValue
     : legacyDisplay?.showVirtualNumbers ?? null;
   const concealStoredNumbers = typeof concealValue === "boolean"
     ? concealValue
     : legacyDisplay?.concealStoredNumbers ?? null;
-  const schemeValue = data["heading-numerals-scheme"];
+  const schemeValue = data["document-numbering-scheme"];
   const schemeId = typeof schemeValue === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/u.test(schemeValue)
     ? schemeValue
     : null;
-  const scopeValue = data["heading-numerals-clean-scope"];
-  const confidenceValue = data["heading-numerals-clean-confidence"];
+  const scopeValue = data["document-numbering-clean-scope"];
+  const confidenceValue = data["document-numbering-clean-confidence"];
   const cleanupScope = scopeValue === "plugin" || scopeValue === "templates" || scopeValue === "common"
     ? scopeValue
     : confidenceValue === "plugin" ? "plugin"
       : confidenceValue === "medium" ? "common"
         : confidenceValue === "high" ? "templates" : null;
-  const startsData = record(data["heading-numerals-start"]);
+  const startsData = record(data["document-numbering-start"]);
   const starts: Partial<Record<1 | 2 | 3 | 4 | 5 | 6, number>> = {};
   if (startsData != null) {
     for (let level = 1; level <= 6; level += 1) {
@@ -90,7 +90,7 @@ export function parseNoteOverrides(frontmatter: unknown): NoteOverrides {
 }
 
 export function resolveNoteSettings(
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   overrides: NoteOverrides,
 ): EffectiveNoteSettings {
   const requestedScheme = overrides.schemeId;

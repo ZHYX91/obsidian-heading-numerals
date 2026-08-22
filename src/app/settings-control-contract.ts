@@ -1,4 +1,4 @@
-import { cloneSettings, type HeadingNumeralsSettings } from "../config/settings";
+import { cloneSettings, type DocumentNumberingSettings } from "../config/settings";
 import type { SettingsImpact } from "./settings-impact";
 
 export type SettingsControlKey =
@@ -23,7 +23,7 @@ export type SettingsControlKey =
   | "views.batchBackupLimitMb";
 
 export interface SettingsControlMutation {
-  readonly settings: HeadingNumeralsSettings;
+  readonly settings: DocumentNumberingSettings;
   readonly impact: SettingsImpact;
   readonly refreshSurface: boolean;
   readonly persistence: "immediate" | "scheduled";
@@ -56,7 +56,7 @@ export function isSettingsControlKey(value: string): value is SettingsControlKey
 }
 
 export function getSettingsControlValue(
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   key: SettingsControlKey,
 ): unknown {
   switch (key) {
@@ -83,7 +83,7 @@ export function getSettingsControlValue(
 }
 
 export function applySettingsControlValue(
-  settings: HeadingNumeralsSettings,
+  settings: DocumentNumberingSettings,
   key: SettingsControlKey,
   value: unknown,
 ): SettingsControlMutation {
@@ -169,7 +169,7 @@ export function applySettingsControlValue(
 }
 
 function invalidControlValue(key: string): Error {
-  return new Error(`Invalid value for Heading Numerals setting: ${key}`);
+  return new Error(`Invalid value for Document Numbering setting: ${key}`);
 }
 
 function controlBoolean(key: string, value: unknown): boolean {

@@ -4,7 +4,7 @@ import { parseNoteOverrides, resolveNoteSettings } from "../config/frontmatter";
 import {
   cleanupTemplateSources,
   toNumberingOptions,
-  type HeadingNumeralsSettings,
+  type DocumentNumberingSettings,
 } from "../config/settings";
 import { parseAtxHeadings } from "../core/heading-parser";
 import { WORD_JOINER } from "../core/markers";
@@ -43,27 +43,27 @@ function headingElements(container: HTMLElement): HTMLHeadingElement[] {
 
 function cleanupHeading(element: HTMLHeadingElement): void {
   for (const virtual of element.querySelectorAll<HTMLElement>(VIRTUAL_NUMERAL_SELECTOR)) {
-    const original = virtual.dataset.headingNumeralsOriginal;
+    const original = virtual.dataset.documentNumberingOriginal;
     if (original != null) virtual.replaceWith(original);
     else virtual.remove();
   }
-  for (const concealed of element.querySelectorAll<HTMLElement>(".heading-numerals-concealed")) {
+  for (const concealed of element.querySelectorAll<HTMLElement>(".document-numbering-concealed")) {
     concealed.replaceWith(...concealed.childNodes);
   }
   element.normalize();
-  element.removeAttribute("data-heading-numerals-mode");
+  element.removeAttribute("data-document-numbering-mode");
 }
 
 function cleanupSemantic(container: HTMLElement): void {
   for (const virtual of container.querySelectorAll<HTMLElement>(
-    ".heading-numerals-caption-number, .heading-numerals-reference-number",
+    ".document-numbering-caption-number, .document-numbering-reference-number",
   )) {
-    const original = virtual.dataset.headingNumeralsOriginal;
+    const original = virtual.dataset.documentNumberingOriginal;
     if (original != null) virtual.replaceWith(original);
     else virtual.remove();
   }
-  for (const anchor of container.querySelectorAll<HTMLElement>("[data-heading-numerals-reference]")) {
-    delete anchor.dataset.headingNumeralsReference;
+  for (const anchor of container.querySelectorAll<HTMLElement>("[data-document-numbering-reference]")) {
+    delete anchor.dataset.documentNumberingReference;
   }
   container.normalize();
 }
@@ -113,7 +113,7 @@ function enhanceReference(container: HTMLElement, target: string, label: string)
   const expected = `#${target}`;
   const anchors = container.querySelectorAll<HTMLElement>("a.internal-link");
   for (const anchor of anchors) {
-    if (anchor.dataset.headingNumeralsReference === "true") continue;
+    if (anchor.dataset.documentNumberingReference === "true") continue;
     const dataHref = anchor.getAttribute("data-href");
     const href = anchor.getAttribute("href");
     if ((dataHref != null && dataHref !== expected) || (dataHref == null && href !== expected)) continue;
@@ -121,9 +121,9 @@ function enhanceReference(container: HTMLElement, target: string, label: string)
     if (text == null) continue;
     text.deleteData(text.length - 1, 1);
     const span = createVirtualSemanticElement(container.ownerDocument, label, "reference");
-    span.dataset.headingNumeralsOriginal = "@";
+    span.dataset.documentNumberingOriginal = "@";
     text.parentNode?.insertBefore(span, anchor);
-    anchor.dataset.headingNumeralsReference = "true";
+    anchor.dataset.documentNumberingReference = "true";
     return true;
   }
   return false;
@@ -143,8 +143,8 @@ function leadingTextNodes(element: HTMLHeadingElement): Text[] {
     const parent = current.parentElement;
     if (
       parent == null
-      || (!parent.classList.contains("heading-numerals-virtual")
-        && !parent.classList.contains("heading-numerals-concealed"))
+      || (!parent.classList.contains("document-numbering-virtual")
+        && !parent.classList.contains("document-numbering-concealed"))
     ) {
       nodes.push(current as Text);
     }
@@ -180,7 +180,7 @@ function concealPrefix(element: HTMLHeadingElement, sourcePrefix: string): boole
       return false;
     }
     const span = element.ownerDocument.createElement("span");
-    span.className = "heading-numerals-concealed";
+    span.className = "document-numbering-concealed";
     span.setAttribute("aria-hidden", "true");
     parent.insertBefore(span, node);
     span.appendChild(node);
@@ -194,7 +194,7 @@ export class HeadingReadingProcessor {
 
   constructor(
     private readonly app: App,
-    private readonly getSettings: () => HeadingNumeralsSettings,
+    private readonly getSettings: () => DocumentNumberingSettings,
   ) {}
 
   invalidate(): void {
@@ -282,11 +282,11 @@ export class HeadingReadingProcessor {
         prependVirtualNumber(element, virtual.label);
       }
       if (virtual != null && concealed) {
-        element.setAttribute("data-heading-numerals-mode", "show-conceal");
+        element.setAttribute("data-document-numbering-mode", "show-conceal");
       } else if (virtual != null) {
-        element.setAttribute("data-heading-numerals-mode", "show");
+        element.setAttribute("data-document-numbering-mode", "show");
       } else if (concealed) {
-        element.setAttribute("data-heading-numerals-mode", "conceal");
+        element.setAttribute("data-document-numbering-mode", "conceal");
       }
     }
     const sectionSemantic = semanticPlan.filter((item) => (
@@ -313,7 +313,7 @@ export class HeadingReadingProcessor {
 
   private buildPlan(
     source: string,
-    settings: HeadingNumeralsSettings,
+    settings: DocumentNumberingSettings,
     effective: ReturnType<typeof resolveNoteSettings>,
   ): CachedReadingPlan {
     const headings = parseAtxHeadings(source);

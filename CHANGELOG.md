@@ -2,6 +2,20 @@
 
 All notable changes will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Renamed the product from Heading Numerals to Document Numbering to reflect its broader support
+  for heading numbers, captions, and same-file references.
+- Changed the plugin ID, installation directory, Properties namespace, CSS namespace, package name,
+  release archive name, and repository references from `heading-numerals` to `document-numbering`.
+
+### Breaking
+
+- Obsidian treats `document-numbering` as a different plugin from `heading-numerals`. Existing
+  installations and note-level `heading-numerals-*` Properties are not migrated automatically.
+
 ## 0.7.0 - 2026-08-21
 
 ### Added

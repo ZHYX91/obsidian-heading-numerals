@@ -13,7 +13,7 @@ export function createSettingsTabs(
   onSelect: (id: SettingsTabId) => void,
 ): { panel: HTMLElement; cleanup: () => void } {
   const document = container.ownerDocument;
-  const list = container.createDiv({ cls: "heading-numerals-settings-tabs" });
+  const list = container.createDiv({ cls: "document-numbering-settings-tabs" });
   list.setAttribute("role", "tablist");
   list.setAttribute("aria-label", ariaLabel);
   list.setAttribute("aria-orientation", "horizontal");
@@ -22,12 +22,12 @@ export function createSettingsTabs(
     const button = list.createEl("button");
     const active = definition.id === activeId;
     button.type = "button";
-    button.className = `heading-numerals-settings-tab${active ? " is-active" : ""}`;
+    button.className = `document-numbering-settings-tab${active ? " is-active" : ""}`;
     button.textContent = definition.label;
-    button.id = `heading-numerals-settings-tab-${definition.id}`;
+    button.id = `document-numbering-settings-tab-${definition.id}`;
     button.setAttribute("role", "tab");
     button.setAttribute("aria-selected", String(active));
-    button.setAttribute("aria-controls", `heading-numerals-settings-panel-${definition.id}`);
+    button.setAttribute("aria-controls", `document-numbering-settings-panel-${definition.id}`);
     button.tabIndex = active ? 0 : -1;
     const click = (): void => onSelect(definition.id);
     const keydown = (event: KeyboardEvent): void => {
@@ -49,10 +49,10 @@ export function createSettingsTabs(
     });
     return button;
   });
-  const panel = container.createDiv({ cls: "heading-numerals-settings-panel" });
-  panel.id = `heading-numerals-settings-panel-${activeId}`;
+  const panel = container.createDiv({ cls: "document-numbering-settings-panel" });
+  panel.id = `document-numbering-settings-panel-${activeId}`;
   panel.setAttribute("role", "tabpanel");
-  panel.setAttribute("aria-labelledby", `heading-numerals-settings-tab-${activeId}`);
+  panel.setAttribute("aria-labelledby", `document-numbering-settings-tab-${activeId}`);
   panel.tabIndex = 0;
   const activeButton = buttons.find((button) => button.classList.contains("is-active"));
   document.defaultView?.requestAnimationFrame(() => (

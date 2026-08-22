@@ -1,8 +1,8 @@
-# Heading Numerals
+# Document Numbering
 
 [English](../../README.md)
 
-Heading Numerals 将 Markdown 工具经常混在一起的两个决定分开：标题序号是否写入 Markdown
+Document Numbering 将 Markdown 工具经常混在一起的两个决定分开：标题序号是否写入 Markdown
 文件，以及这些序号是否在 Obsidian 中可见。它可以写入、移除、虚拟显示或视觉隐藏标题
 序号，不访问网络，也不收集遥测。
 
@@ -42,12 +42,12 @@ Obsidian 验收记录是彼此独立的证据。
 
 ### 第三方插件市场
 
-在 Obsidian 中打开**设置 → 第三方插件 → 浏览**，搜索 **Heading Numerals**，安装并启用。
+在 Obsidian 中打开**设置 → 第三方插件 → 浏览**，搜索 **Document Numbering**，安装并启用。
 
 ### 手动安装
 
 从同一个 GitHub Release 下载 `main.js`、`manifest.json` 和 `styles.css`，将三个文件放入
-`.obsidian/plugins/heading-numerals/`，然后重新加载 Obsidian 并启用插件。不要混用不同
+`.obsidian/plugins/document-numbering/`，然后重新加载 Obsidian 并启用插件。不要混用不同
 版本的文件。
 
 <!-- section: usage -->
@@ -99,21 +99,21 @@ Obsidian 1.13 使用六个原生设置页面：常规、标题编号、题注、
 ### 按笔记 Properties 覆盖
 
 当前笔记面板显示全局值、覆盖值和最终生效值。未修改的笔记不会得到插件 Properties。
-将控制项改回“跟随全局”会删除对应属性；“全部恢复”会移除全部 Heading Numerals 覆盖，
+将控制项改回“跟随全局”会删除对应属性；“全部恢复”会移除全部 Document Numbering 覆盖，
 并保留无关 Properties。
 
 ```yaml
 ---
-heading-numerals-show-virtual: true
-heading-numerals-conceal-stored: true
-heading-numerals-scheme: hierarchical-h2
-heading-numerals-clean-scope: templates
-heading-numerals-start:
+document-numbering-show-virtual: true
+document-numbering-conceal-stored: true
+document-numbering-scheme: hierarchical-h2
+document-numbering-clean-scope: templates
+document-numbering-start:
   h2: 3
 ---
 ```
 
-`heading-numerals-ignore: true` 让当前笔记退出显示和文件操作。旧版组合显示属性和清理置信度
+`document-numbering-ignore: true` 让当前笔记退出显示和文件操作。旧版组合显示属性和清理置信度
 属性仍会为了向后兼容而读取。
 
 <!-- section: limitations -->
@@ -132,7 +132,7 @@ heading-numerals-start:
 <!-- section: privacy-and-security -->
 ## 隐私与安全
 
-Heading Numerals 完全在本地运行，不包含联网、遥测、分析、广告、远程字体或远程资源。虚拟
+Document Numbering 完全在本地运行，不包含联网、遥测、分析、广告、远程字体或远程资源。虚拟
 显示和视觉隐藏路径不会调用文件写入 API。
 
 当前笔记修改使用一次编辑器事务。批处理会预览全部目标、重新校验精确内容、保存有界恢复
@@ -173,7 +173,7 @@ npm run check
 <!-- section: support -->
 ## 支持
 
-请通过 [GitHub Issues](https://github.com/ZHYX91/obsidian-heading-numerals/issues) 报告可复现问题
+请通过 [GitHub Issues](https://github.com/ZHYX91/obsidian-document-numbering/issues) 报告可复现问题
 或提出功能建议。请提供插件和 Obsidian 版本、操作系统、最小化的合成 Markdown、所选方案及
 精确操作。不要附带私有 Vault 内容。
 

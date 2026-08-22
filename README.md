@@ -1,8 +1,8 @@
-# Heading Numerals
+# Document Numbering
 
 [简体中文](docs/i18n/README.zh-CN.md)
 
-Heading Numerals separates two decisions that Markdown tools often mix together: whether heading
+Document Numbering separates two decisions that Markdown tools often mix together: whether heading
 numbers are stored in a Markdown file and whether those numbers are visible in Obsidian. It can
 write, remove, virtually display, or visually conceal heading numbers without network access or
 telemetry.
@@ -46,13 +46,13 @@ packaged-candidate checks, and dated Obsidian acceptance records are separate fo
 
 ### Community Plugins
 
-In Obsidian, open **Settings → Community plugins → Browse**, search for **Heading Numerals**, install
+In Obsidian, open **Settings → Community plugins → Browse**, search for **Document Numbering**, install
 it, and enable it.
 
 ### Manual installation
 
 Download `main.js`, `manifest.json`, and `styles.css` from one matching GitHub Release. Place those
-three files in `.obsidian/plugins/heading-numerals/`, then reload Obsidian and enable the plugin.
+three files in `.obsidian/plugins/document-numbering/`, then reload Obsidian and enable the plugin.
 Do not mix files from different versions.
 
 <!-- section: usage -->
@@ -113,20 +113,20 @@ heading links. A dedicated command removes markers while retaining visible numbe
 
 The current-note panel exposes global, override, and effective values. Untouched notes receive no
 plugin Properties. Returning a control to **Follow global** deletes that property; **Restore all**
-removes every Heading Numerals override and preserves unrelated Properties.
+removes every Document Numbering override and preserves unrelated Properties.
 
 ```yaml
 ---
-heading-numerals-show-virtual: true
-heading-numerals-conceal-stored: true
-heading-numerals-scheme: hierarchical-h2
-heading-numerals-clean-scope: templates
-heading-numerals-start:
+document-numbering-show-virtual: true
+document-numbering-conceal-stored: true
+document-numbering-scheme: hierarchical-h2
+document-numbering-clean-scope: templates
+document-numbering-start:
   h2: 3
 ---
 ```
 
-`heading-numerals-ignore: true` opts the note out of display and file operations. Legacy combined
+`document-numbering-ignore: true` opts the note out of display and file operations. Legacy combined
 display and cleanup-confidence properties are read for backward compatibility.
 
 <!-- section: limitations -->
@@ -148,7 +148,7 @@ display and cleanup-confidence properties are read for backward compatibility.
 <!-- section: privacy-and-security -->
 ## Privacy and security
 
-Heading Numerals runs locally and contains no networking, telemetry, analytics, advertisements,
+Document Numbering runs locally and contains no networking, telemetry, analytics, advertisements,
 remote fonts, or remote assets. Virtual display and concealment never call file-write APIs.
 
 Current-note changes use one editor transaction. Batch operations preview all targets, revalidate
@@ -190,7 +190,7 @@ Governance and project history:
 <!-- section: support -->
 ## Support
 
-Use [GitHub Issues](https://github.com/ZHYX91/obsidian-heading-numerals/issues) for reproducible bugs
+Use [GitHub Issues](https://github.com/ZHYX91/obsidian-document-numbering/issues) for reproducible bugs
 and feature requests. Include plugin and Obsidian versions, operating system, minimal synthetic
 Markdown, the selected scheme, and the exact action taken. Do not attach private vault content.
 

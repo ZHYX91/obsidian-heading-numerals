@@ -18,7 +18,7 @@ import {
   cloneSettings,
   sanitizePluginData,
   sanitizeSettings,
-  type HeadingNumeralsSettings,
+  type DocumentNumberingSettings,
   type LastBatchSnapshot,
 } from "../config/settings";
 import {
@@ -32,16 +32,16 @@ import {
 import { HeadingDisplayController } from "../editor/heading-display-extension";
 import { HeadingReadingProcessor } from "../reading/heading-postprocessor";
 import { NoteControlModal } from "../ui/note-control-modal";
-import { HeadingNumeralsSettingTab } from "./settings-tab";
+import { DocumentNumberingSettingTab } from "./settings-tab";
 import type { SettingsImpact } from "./settings-impact";
 
-export default class HeadingNumeralsPlugin extends Plugin {
-  override settings: HeadingNumeralsSettings = { ...DEFAULT_SETTINGS };
+export default class DocumentNumberingPlugin extends Plugin {
+  override settings: DocumentNumberingSettings = { ...DEFAULT_SETTINGS };
   private lastBatch: LastBatchSnapshot | null = null;
   private displayController: HeadingDisplayController | null = null;
   private batchController: BatchController | null = null;
   private recoveryStore: RecoveryStore | null = null;
-  private settingsCoordinator: SettingsSaveCoordinator<HeadingNumeralsSettings> | null = null;
+  private settingsCoordinator: SettingsSaveCoordinator<DocumentNumberingSettings> | null = null;
   private readingProcessor: HeadingReadingProcessor | null = null;
 
   override async onload(): Promise<void> {
@@ -57,7 +57,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       await this.saveData({ schemaVersion: 5, settings: snapshot });
     });
     await this.settingsCoordinator.save(cloneSettings(this.settings)).catch((error: unknown) => {
-      console.error("Heading Numerals: initial settings migration remains pending", error);
+      console.error("Document Numbering: initial settings migration remains pending", error);
     });
 
     this.displayController = new HeadingDisplayController(() => this.settings);
@@ -78,7 +78,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
       },
     );
 
-    this.addSettingTab(new HeadingNumeralsSettingTab(this.app, this));
+    this.addSettingTab(new DocumentNumberingSettingTab(this.app, this));
     this.registerCommands();
     this.addRibbon();
     this.applyAppearance();
@@ -86,20 +86,20 @@ export default class HeadingNumeralsPlugin extends Plugin {
 
   override onunload(): void {
     void this.settingsCoordinator?.flush().catch((error: unknown) => {
-      console.error("Heading Numerals: failed to flush settings", error);
+      console.error("Document Numbering: failed to flush settings", error);
     });
     this.cleanupReadingDom();
     this.clearAppearance();
   }
 
-  scheduleSettings(settings: HeadingNumeralsSettings, impact: SettingsImpact = "all"): void {
+  scheduleSettings(settings: DocumentNumberingSettings, impact: SettingsImpact = "all"): void {
     this.settings = sanitizeSettings(settings);
     this.applySettingsImpact(impact);
     this.settingsCoordinator?.schedule(cloneSettings(this.settings));
   }
 
   async saveSettings(
-    settings: HeadingNumeralsSettings = this.settings,
+    settings: DocumentNumberingSettings = this.settings,
     impact: SettingsImpact = "all",
   ): Promise<void> {
     this.settings = sanitizeSettings(settings);
@@ -138,7 +138,7 @@ export default class HeadingNumeralsPlugin extends Plugin {
         id: `set-view-mode-${mode}`,
         name: this.translate()(key),
         callback: () => void this.updateDisplayPreference(mode).catch((error: unknown) => {
-          console.error("Heading Numerals: failed to save view mode", error);
+          console.error("Document Numbering: failed to save view mode", error);
         }),
       });
     }
@@ -265,11 +265,11 @@ export default class HeadingNumeralsPlugin extends Plugin {
   private applyAppearance(): void {
     for (const ownerDocument of this.ownerDocuments()) {
       ownerDocument.body.style.setProperty(
-        "--heading-numerals-virtual-opacity",
+        "--document-numbering-virtual-opacity",
         String(this.settings.virtualOpacity),
       );
       ownerDocument.body.style.setProperty(
-        "--heading-numerals-virtual-gap",
+        "--document-numbering-virtual-gap",
         `${this.settings.virtualGapEm}em`,
       );
     }
@@ -277,25 +277,25 @@ export default class HeadingNumeralsPlugin extends Plugin {
 
   private clearAppearance(): void {
     for (const ownerDocument of this.ownerDocuments()) {
-      ownerDocument.body.style.removeProperty("--heading-numerals-virtual-opacity");
-      ownerDocument.body.style.removeProperty("--heading-numerals-virtual-gap");
+      ownerDocument.body.style.removeProperty("--document-numbering-virtual-opacity");
+      ownerDocument.body.style.removeProperty("--document-numbering-virtual-gap");
     }
   }
 
   private cleanupReadingDom(): void {
     for (const ownerDocument of this.ownerDocuments()) {
       for (const virtual of ownerDocument.querySelectorAll<HTMLElement>(
-        ".markdown-reading-view .heading-numerals-virtual",
+        ".markdown-reading-view .document-numbering-virtual",
       )) {
-        const original = virtual.dataset.headingNumeralsOriginal;
+        const original = virtual.dataset.documentNumberingOriginal;
         if (original != null) virtual.replaceWith(original);
         else virtual.remove();
       }
       for (const anchor of ownerDocument.querySelectorAll<HTMLElement>(
-        ".markdown-reading-view [data-heading-numerals-reference]",
-      )) delete anchor.dataset.headingNumeralsReference;
+        ".markdown-reading-view [data-document-numbering-reference]",
+      )) delete anchor.dataset.documentNumberingReference;
       for (const concealed of ownerDocument.querySelectorAll<HTMLElement>(
-        ".markdown-reading-view .heading-numerals-concealed",
+        ".markdown-reading-view .document-numbering-concealed",
       )) {
         concealed.replaceWith(...concealed.childNodes);
       }

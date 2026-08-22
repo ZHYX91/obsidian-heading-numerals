@@ -7,12 +7,12 @@ describe("Obsidian plugin settings adapter", () => {
     const open = vi.fn();
     const openTabById = vi.fn();
 
-    expect(openObsidianPluginSettings({ setting: { open, openTabById } }, "heading-numerals")).toBe(true);
+    expect(openObsidianPluginSettings({ setting: { open, openTabById } }, "document-numbering")).toBe(true);
     expect(open).toHaveBeenCalledOnce();
-    expect(openTabById).toHaveBeenCalledWith("heading-numerals");
+    expect(openTabById).toHaveBeenCalledWith("document-numbering");
   });
 
   it("fails closed without the host surface", () => {
-    expect(openObsidianPluginSettings({}, "heading-numerals")).toBe(false);
+    expect(openObsidianPluginSettings({}, "document-numbering")).toBe(false);
   });
 });
